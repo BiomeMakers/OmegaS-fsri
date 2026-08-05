@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+type: software
+title: "The Functional Symbiotic Resilience Index: Topological Entropy,
+  Wasserstein Curvature Bounds, and Non-Equilibrium Thermodynamics
+  of Complex Networks"
+authors:
+  - family-names: Acedo
+    given-names: Alberto
+    email: acedo@biomemakers.com
+    affiliation: Biome Makers Inc.
+date-released: 2026-08-03
+license: CC-BY-NC-ND-4.0
+repository-code: https://github.com/BiomeMakers/OmegaS-fsri
+preferred-citation:
+  type: article
+  title: >
+    The Functional Symbiotic Resilience Index: Topological Entropy,
+    Wasserstein Curvature Bounds, and Non-Equilibrium Thermodynamics
+    of Complex Networks
+  authors:
+    - family-names: Acedo
+      given-names: Alberto
+  year: 2026
+  notes: "USPTO Patent Pending No. 64/121,656"
+  url: https://github.com/BiomeMakers/OmegaS-fsri

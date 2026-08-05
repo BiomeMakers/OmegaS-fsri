@@ -1,0 +1,29 @@
+# LaTeX auxiliares
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Figure build artefacts.
+# The PNGs in figures/ ARE versioned: figures/README.md documents them.
+# The PNGs the notebooks write are outputs and are not.
+*.eps
+colabs/*.png
+
+# macOS
+.DS_Store
+
+# editors
+.vscode/
+*.swp

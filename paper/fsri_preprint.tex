@@ -1,0 +1,2404 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\graphicspath{{./}{../github/fsri-theory/figures/}}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{authblk}
+\usepackage{abstract}
+\usepackage{titlesec}
+\usepackage[numbers]{natbib}
+\usepackage{xcolor}
+\usepackage{mdframed}
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+% ============================================================
+\title{\textbf{The Functional Symbiotic Resilience Index:\\
+Topological Entropy, Wasserstein Curvature Bounds,\\
+and Non-Equilibrium Thermodynamics of Complex Networks}}
+
+\author[1]{Alberto Acedo}
+\affil[1]{Biome Makers Inc. \quad \texttt{acedo@biomemakers.com}}
+\date{August 2026}
+% ============================================================
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present a mathematical framework unifying network topology,
+non-equilibrium thermodynamics, and resilience theory through the
+\textbf{Functional Symbiotic Resilience Index} (FSRI, $\Omega$).
+The central object is the topological pressure functional
+$\mathcal{T}(W) = \operatorname{Tr}(WW^\top)^3$, which we show to be
+(i) proportional to the global clustering coefficient of the induced
+weighted graph, (ii) the generator of a gradient flow whose fixed points
+correspond to Prigoginian minimum-entropy-production states, and
+(iii) a Gini-measurable concentration index whose gradient $3(WW^\top)^2$
+identifies structural monopolies, that is, nodes or weights that accumulate
+disproportionate topological influence.
+
+We further establish where the framework's information actually resides.
+The global functional obeys the exact identity
+$\operatorname{Tr}(A^3) = \sum_i \lambda_i^3$: it \emph{is} the third
+spectral moment, and is therefore a member of the same family as the
+Absorption Ratio, effective rank and the Vendi score rather than an
+alternative to it. By contrast, the node-wise decomposition
+$(A^3)_{ii} = \sum_k \lambda_k^3 (v_k)_i^2$ depends on eigenvectors and is
+\emph{not} determined by the spectrum: we give an explicit cospectral pair
+with identical $\operatorname{Tr}(A^3)$ but distinct
+$\operatorname{diag}(A^3)$. This locates the non-redundant content of the
+framework in the node-wise field rather than in the global scalar, and
+predicts the empirical pattern observed in applications. We also show that
+on \emph{signed} matrices the same functional measures Heider structural
+balance, information inaccessible to any index computed on $|A|$.
+
+We validate these properties through exact analytical results and
+computational experiments on synthetic networks (Barabási-Albert,
+Watts-Strogatz, Erdős-Rényi, ring lattice), demonstrating that the
+Gini coefficient of the topological pressure distribution distinguishes
+monopoly networks ($G \approx 0.986$) from uniform networks
+($G \approx 0.272$) by a factor of 3.6×.
+
+The framework has an immediate computational application: the Omega-S
+regularizer~\cite{acedo2026omegas}, which minimises
+$\operatorname{Tr}(WW^\top)^3$ during neural network training via
+Hutchinson stochastic trace estimation. In the applied work that penalty is
+combined with group lasso for structured pruning, where the compression
+obtained is attributable to the group-lasso term and the marginal contribution
+of the topological penalty remains to be isolated, and it improves
+sequential-learning retention on Llama-3-8B, where the log-ratio Omega-S
+regulariser leaves more code capability after a sequential fine-tune than no
+regularisation at all on 9 of 10 seeds (absolute HumanEval $0.173 \to 0.238$,
+$+37.7\%$ relative, one-sided sign test $p = 0.011$), and beats tuned weight
+decay on 10 of 10 seeds ($p = 0.002$) and tuned EWC on 8 of 10 ($p = 0.014$)
+on the same absolute measure, without access to previous-task data.
+
+
+Throughout, ``resilience'' names a structural configuration and not a
+measured return time: no result below measures recovery from a perturbation,
+and Remark~\ref{rem:nomenclature} states the scope of the term.
+
+\textbf{Keywords:} topological entropy, non-equilibrium thermodynamics,
+clustering coefficient, Prigogine minimum entropy production, scale-free
+networks, structural monopolies, neural network regularisation.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+\subsection{The Structural Monopoly Problem}
+
+Complex adaptive systems, among them biological ecosystems, financial
+markets, power grids and neural networks, share a common failure mode:
+\emph{structural monopoly}. A small subset of nodes or weights
+accumulates disproportionate influence over the network's information
+flow, creating fragility that absolute-count metrics fail to detect.
+Diversity metrics count species, neurons, or assets without measuring
+their functional interdependence. A network can appear diverse while
+being structurally dominated by a single hub. That gap is not hypothetical:
+a survey of 1\,921 soil samples across 33 countries reports that agricultural
+inputs raise apparent alpha diversity while shifting communities toward less
+mutualistic and more fragmented configurations, and states explicitly that
+higher diversity need not imply better function when the added taxa are
+opportunistic rather than functionally redundant~\cite{saati2026}.
+
+This paper addresses the following question: \emph{what is the correct
+mathematical quantity to measure structural monopoly, and what is its
+thermodynamic meaning?}
+
+\subsection{The Central Object: Tr$(A^3)$}
+
+The clustering coefficient of a graph with adjacency matrix $A$ is
+standardly defined as~\cite{watts1998}:
+\begin{equation}
+C = \frac{\operatorname{Tr}(A^3)}{\sum_{ij}(A^2)_{ij} - \operatorname{Tr}(A^2)}.
+\label{eq:clustering}
+\end{equation}
+
+The numerator $\operatorname{Tr}(A^3) = \sum_{ijk} A_{ij}A_{jk}A_{ki}$
+counts the number of closed triangles (3-cycles) in the graph. For
+weighted matrices $W \in \mathbb{R}^{m \times n}$ arising from neural
+network layers, we define the induced adjacency matrix
+$A = WW^\top \in \mathbb{R}^{m \times m}$ and the topological pressure
+functional:
+\begin{equation}
+\mathcal{T}(W) = \operatorname{Tr}(WW^\top)^3 = \operatorname{Tr}(A^3).
+\label{eq:T_functional}
+\end{equation}
+
+We will show that minimising $\mathcal{T}(W)$ is equivalent to
+minimising structural monopoly, and that this minimisation corresponds
+to a Prigoginian minimum-entropy-production principle.
+
+\subsection{Relation to Prior Work}
+
+The connection between triangle density and phase transitions in
+networks was established by Strauss~\cite{strauss1986} via the
+exponential random graph model with triangle fugacity $\lambda$.
+Recent work~\cite{motif2026} shows that above a critical fugacity,
+random graphs undergo a first-order transition from a triangle-poor
+to a triangle-rich phase, accompanied by a change in spectral density
+of the adjacency matrix, the same object we study here.
+
+The connection between network topology and non-equilibrium
+thermodynamics has been partially explored by Topologically-constrained
+fluctuations~\cite{martins2023} and thermodynamic resilience
+theory~\cite{toporesilience2017}. Our contribution is to show that
+$\mathcal{T}(W) = \operatorname{Tr}(A^3)$ is the \emph{correct}
+topological entropy production rate whose minimisation implements
+Prigogine's theorem~\cite{prigogine1967}.
+
+AlphaPruning~\cite{lu2024alpha} uses heavy-tailed spectral exponents
+of weight matrices to guide neural network pruning. It is natural to read
+that approach as ``spectral'' in contrast to a ``topological'' one based on
+triangle counting, but Proposition~\ref{prop:spectral_identity} shows the
+contrast is not available at the level of the global functional:
+$\operatorname{Tr}(A^3)$ \emph{is} the third spectral moment. The two
+approaches read different functionals of the same spectrum. Where our
+framework does depart is (i) in supplying a thermodynamic interpretation of
+why such structural signals predict redundancy, (ii) in being a
+\emph{training-time gradient flow} rather than a post-hoc statistic, and
+(iii) in the node-wise field $\operatorname{diag}(A^3)$, which by
+Proposition~\ref{prop:node_nonspectral} is not spectrally determined.
+
+% ============================================================
+\section{Mathematical Framework}
+% ============================================================
+
+\subsection{The Functional Symbiotic Resilience Index}
+
+\begin{definition}[FSRI]
+\label{def:fsri}
+For a network with adjacency matrix $A \in \mathbb{R}^{n \times n}$,
+the Functional Symbiotic Resilience Index is:
+\begin{equation}
+\Omega = \frac{C \cdot D}{M \cdot \mathrm{Coex}},
+\label{eq:fsri}
+\end{equation}
+where $C$ is the global clustering coefficient~\eqref{eq:clustering},
+$D = \frac{\sum_{ij} A_{ij}}{n(n-1)}$ is the connection density,
+$M = 1/\lambda_2(L)$ is the inverse algebraic connectivity, where
+$\lambda_2$ is the second-smallest eigenvalue of the graph Laplacian
+$L = \operatorname{diag}(\mathbf{k}) - A$, and
+$\mathrm{Coex} = \mathrm{Var}(\mathbf{k})$ is the variance of the degree
+sequence $\mathbf{k} = A\mathbf{1}$.
+
+Earlier statements of this definition left $M$ as ``a modularity measure, for
+instance an inverse spectral gap''. We fix it here because that latitude turned
+out to matter: $M$ sits in the denominator, so the choice between $\lambda_2$
+and $1/\lambda_2$ \emph{inverts} how $\Omega$ responds to compartmentalisation.
+The orientation is not a matter of convention. It is fixed by the observation
+the index was built to formalise, which Remark~\ref{rem:factors} sets out: a
+graph that separates easily into modules has small $\lambda_2$, so $1/\lambda_2$
+is the quantity that is large on modular graphs, and it is modularity, not
+connectivity, that must appear in the denominator.
+\end{definition}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.80\textwidth]{figure1_monopoly.pdf}
+\caption{What the index responds to, at matched edge count. Left: connectivity
+distributed across the network. Right: a structural monopoly, in which a hub
+and a tight core absorb most of the closed three-step walks. Node labels give
+the triangles incident on each node, $(A^3)_{ii}/2$, which is the quantity the
+node-wise decomposition of Section~\ref{sec:spectral} reads off.}
+\label{fig:monopoly}
+\end{figure}
+
+\begin{remark}
+\label{rem:factors}
+$\mathrm{Coex}$ (Competitive Exclusion) measures degree heterogeneity.
+In the ecological interpretation, which derives from prior work on
+co-inclusion and co-exclusion networks in agricultural
+microbiomes~\cite{biome_patent,acedo2022indices}, high $\mathrm{Coex}$
+indicates that a few nodes dominate connectivity, analogous to competitive
+exclusion in resource competition. The FSRI $\Omega$ is large when the
+network is simultaneously clustered ($C$ high), dense ($D$ high),
+cohesive rather than compartmentalised ($M = 1/\lambda_2$
+low, so the graph does not separate easily into modules), and egalitarian
+($\mathrm{Coex}$ low).
+
+That combination is not chosen for algebraic convenience: it is the one
+reported for the systems the index was built to identify. In a survey of 350
+vineyard soils across two countries~\cite{ortiz2021}, communities under
+low-intervention management, which are the ones associated with small-world
+structure and with resistance to perturbation, show simultaneously
+\emph{higher} clustering, \emph{lower} modularity and \emph{lower} co-exclusion
+than conventionally managed soils, with intermediate management intermediate on
+all three. Every factor of~\eqref{eq:fsri} inherits its direction from that
+observation, and the orientation of $M$ inherits it too: for $\Omega$ to be
+large on those communities it must decrease with modularity, and since $M$ is
+in the denominator, $M$ must be a modularity measure. An earlier statement of
+this remark used the word ``modular'' where it should have read
+``compartmentalised'' and pointed the other way; that was an error of phrasing,
+not of the formula.
+
+A second published study bears on the same direction at a larger scale. In a
+global survey of soil microbiomes~\cite{saati2026}, agricultural inputs raise
+modularity and shift network organisation toward compartmentalised
+configurations that the authors read as less mutualistic and more fragmented.
+We rest on the modularity and clustering results of that work and not on its
+density result, because the density contrast there is drawn between groups of
+very unequal size and the number of samples enters the network construction
+twice, through a prevalence filter and through the power of the association
+test; a comparison of density between groups of unequal sample size therefore
+carries a component of sampling effort, in the sense made precise in
+Section~\ref{sec:limitations}.
+
+One point of nomenclature should be made explicit, since the name is
+inherited but the quantity is not. In the microbiome work referred to
+above, the co-exclusion quantity is the \emph{proportion of negative
+(co-exclusion) edges} in a signed association network, measured
+alongside clustering and modularity computed on the positive
+subnetwork. Here $\mathrm{Coex}$ is the variance of the degree sequence
+of a single unsigned network. These are different measurements, and the
+ecological reading transfers as an analogy, not as the same statistic.
+\end{remark}
+
+\begin{remark}[Nomenclature: what ``resilience'' names here]
+\label{rem:nomenclature}
+The name of the index is inherited from the applied setting in which it was
+first used, and it is worth separating from the technical sense the word
+carries in ecology. Engineering resilience is a return time to equilibrium
+after a perturbation, and ecological resilience in Holling's sense is the
+magnitude of perturbation a system absorbs before changing basin. \emph{No
+quantity in this paper measures either.} What $\Omega$ measures is a
+structural configuration: clustered, dense, weakly compartmentalised and
+egalitarian in degree. The link from that configuration to resilience in
+either technical sense is an inference from the literature of
+Remark~\ref{rem:factors}, not a measurement reported here, and where the
+inference has been tested it has been tested on function rather than on
+recovery~\cite{wagg2019}. We keep the name because it is the one under which
+the index is used and cited, and we state the gap rather than let the name
+assert it. The same caution applies to ``health'' as a synonym: soil health
+is a policy-defined term tied to one domain, and adopting it would narrow an
+index that Section~\ref{sec:applications} applies to weights, prices and
+grids.
+\end{remark}
+
+\begin{remark}[Scope condition on the orientation of $M$]
+\label{rem:modularity_scope}
+Of the four factors, $M$ is the one whose \emph{orientation} is least settled
+by evidence, and we state the condition rather than leave the choice of
+Definition~\ref{def:fsri} looking universal. Three independent lines point the
+other way from Remark~\ref{rem:factors}. Long-term experimental warming of
+grassland soil raises network size, connectivity, clustering \emph{and}
+relative modularity together, and the resulting networks are measured to be
+more robust, not less~\cite{yuan2021}. In trophic settings a modular and
+weakly connected architecture is the stabilising one, while dense and nested
+architecture stabilises mutualistic networks, so the sign of modularity is a
+function of which interaction type dominates rather than a constant of
+nature~\cite{thebault2010}. And in the human gut, co-occurrence networks of
+healthy subjects are reported to be \emph{more} easily disrupted by removal of
+a few key taxa than those of patients with inflammatory bowel
+disease~\cite{baldassano2016}.
+
+None of these contradicts the direction adopted here, because none is measured
+on the system Remark~\ref{rem:factors} describes: a competitive and
+mutualistic microbial community under a management-intensity gradient. What
+they establish is that the orientation of $M$ is domain-conditional. We
+therefore restrict Definition~\ref{def:fsri} to settings in which competitive
+and mutualistic interactions dominate and compartmentalisation reflects niche
+specialisation rather than the buffering of a trophic cascade, and we note
+that in the two applied settings of this framework the question does not
+arise: under the construction of Remark~\ref{rem:composition} the modularity
+factor is numerically inert, so the applied results are indifferent to its
+orientation. Modularity is not thereby demoted: in the domain of origin it is
+among the strongest discriminators available. It is the sign, not the
+information content, that is conditional.
+\end{remark}
+
+\begin{remark}[Relation to the applied implementation]
+\label{rem:composition}
+Definition~\ref{def:fsri} fixes the index. The regulariser of the companion
+applied work~\cite{acedo2026omegas} computes a related but distinct objective:
+it differs in the construction of $A$, in the normalisation of $C$ and in the
+orientation of $M$, and that paper documents each difference and measures which
+of the four factors is live under its construction. We record the relation here
+rather than the detail, because no result of the present paper depends on it:
+Propositions~\ref{prop:spectral_identity},~\ref{prop:node_nonspectral},
+\ref{prop:gradient_flow} and~\ref{prop:shape_invariant}, and the curvature
+bound of Section~\ref{sec:orc_graphs}, are statements about
+$\operatorname{Tr}(A^3)$ and about individual factors, not about how the four
+are composed. A financial companion paper places $\mathrm{Coex}$ on the other
+side of the ratio, and that difference is now settled rather than pending, and
+is a consequence rather than a convention. If degree heterogeneity is
+destabilising in the sense of~\cite{yan2017}, then a high $\mathrm{Coex}$ marks
+fragility in both domains, and the two placements are two packagings of one
+claim: an index built to be large on resilient systems carries the
+concentration factor in the denominator, and an indicator built to rise under
+stress carries it in the numerator. Under financial stress every factor moves the same
+way, correlations rising so that $C$, $D$ and $\mathrm{Coex}$ all increase while
+the inverse spectral gap falls, so an indicator meant to rise under stress must
+compose them differently from an index meant to be large on resilient systems.
+The asymmetry beneath that is worth stating here because it bears on the scope
+of Definition~\ref{def:fsri}: a densely interconnected, weakly modular community
+is the healthy configuration in the ecological setting of
+Remark~\ref{rem:factors}, and is the crisis configuration in a market. The index
+as defined is oriented for the former, and applying it unchanged to the latter
+would call a crash resilient.
+
+One point does belong here, because it bears on the scope of the index rather
+than on any implementation. Under the bounded map that the applied work uses to
+build $A$ from weight matrices, three of the four factors become numerically
+inert: their elasticity with respect to the weights is at or below $10^{-4}$,
+against $9\times10^{-3}$ for $\mathrm{Coex}$. That is a property of \emph{that
+construction} and not of the index. In the ecological setting from which the
+index derives, modularity is among the strongest discriminators available: in
+the survey of Remark~\ref{rem:factors} it separates management types with
+$r^2 = 0.955$, comparable to co-exclusion and higher than clustering. A factor
+that carries most of the signal in the domain of origin and none under a
+saturating construction on neural weights is telling us about the construction,
+which is the reading Remark~\ref{rem:doubly_stochastic} already develops for a
+different degenerate case.
+\end{remark}
+
+\begin{remark}[Conditions of comparability across graphs]
+\label{rem:comparability}
+The four factors do not behave alike under a change in the order of the
+graph, and this constrains when two values of $\Omega$ may be compared.
+$C$ is a ratio of closed triangles to connected triples, and is
+dimensionless and bounded in $[0,1]$. $M$ depends on which modularity
+measure is chosen, and neither standard choice is size-invariant a priori:
+a partition-quality score is bounded but inherits the resolution limit
+of~\cite{fortunato2007}, under which the score of a graph with fixed
+community structure drifts with $n$, while an inverse spectral gap is
+unbounded and its scaling with $n$ depends on the graph family.
+$D = \sum_{ij} A_{ij}/n(n-1)$ is $O(1/n)$ at fixed mean degree.
+$\mathrm{Coex} = \mathrm{Var}(\mathbf{k})$ carries units of degree squared
+and, for a degree distribution with tail exponent $\gamma < 3$, diverges
+with $n$; throughout, $\gamma$ denotes that degree exponent, while the
+sampling exponents of Section~\ref{sec:limitations} are written $\beta_V$
+and $\beta_E$. The index therefore multiplies two size-invariant quantities by
+two that are not, so a comparison of $\Omega$ between graphs of different
+order measures order as well as structure, and
+Proposition~\ref{prop:ws_exact} makes the dependence explicit for
+Watts-Strogatz graphs.
+
+A second and weaker condition should be kept separate from this one. Being
+dimensionless and bounded does not make a factor invariant under a change
+of \emph{sampling} effort, in the case where the graph is estimated rather
+than given. Section~\ref{sec:limitations} reports a measurement in which
+all four factors, $C$ included, drift under such a change. All comparisons
+reported in this paper are at matched order and matched edge count
+(Proposition~\ref{prop:discriminative} at $N = 50$,
+Table~\ref{tab:pressure} at $N = 40$, and Figure~\ref{fig:monopoly} at
+matched edge count), and we state the condition rather than leave it
+implicit. A constructive counterpart, identifying which two of the
+four factors carry the dependence and what removes it, is given in
+Proposition~\ref{prop:shape_invariant}.
+
+The condition can be made numerical rather than left as an injunction. If
+$\Omega$ scales as $n^{b}$, then two graphs whose orders differ by a factor
+$r$ differ by $r^{|b|}$ on that account alone, so admitting a tolerance
+$\varepsilon$ of order-induced variation bounds the admissible ratio at
+$r \le (1+\varepsilon)^{1/|b|}$. On the estimated graphs of
+Section~\ref{sec:limitations}, expressed against the order rather than against
+the sample size, $b = -2.18$ for $\Omega$ and $+0.05$ for
+$\widetilde{\Omega}$. A ten per cent tolerance therefore admits orders
+differing by about $4\%$ for $\Omega$ and by a factor of about $6$ for
+$\widetilde{\Omega}$. The numbers are family-dependent and are quoted to fix
+an order of magnitude, not as constants.
+
+Finally, the condition is \emph{vacuous} wherever the node set is fixed by
+construction rather than discovered by sampling. In the neural application of
+Section~\ref{sec:omega_s} the nodes are the rows of a given weight matrix, and
+in a correlation network over a fixed set of assets the nodes are the assets;
+in neither case does $n$ vary with how much data is collected. Everything in
+this remark and in Section~\ref{sec:limitations} concerns graphs whose vertex
+set grows with the sampling effort, and the applied results of this framework
+lie outside that class.
+\end{remark}
+
+\begin{proposition}[The clustering factor carries a density scale]
+\label{prop:excess}
+Let $A = c\,(J - I)$ with $c > 0$, that is a graph of constant affinity $c$
+and zero diagonal, where $J$ is the all-ones matrix. Then
+\begin{equation}
+C = c, \qquad D = c, \qquad \text{hence} \quad C/D = 1
+\label{eq:excess}
+\end{equation}
+identically, for every order $n \ge 3$ and every $c$.
+\end{proposition}
+
+\begin{proof}
+With $A = c(J-I)$ one has $A^2 = c^2[(n-2)J + I]$ and
+$\operatorname{Tr}(A^3) = c^3 n(n-1)(n-2)$, while
+$\sum_{ij}(A^2)_{ij} - \operatorname{Tr}(A^2) = c^2 (n-2)n(n-1)$, so
+$C = c$ by~\eqref{eq:clustering}. And $\sum_{ij} A_{ij} = c\,n(n-1)$ gives
+$D = c$. \qed
+\end{proof}
+
+\begin{remark}[The density-free triadic excess, and how to calibrate it]
+\label{rem:excess}
+Proposition~\ref{prop:excess} is elementary but it has a practical
+consequence that is easy to miss when $C$ is read on its own: a value of $C$
+is not by itself evidence of triadic structure, because a graph with no
+structure whatever returns $C$ equal to its mean affinity. The
+density-free quantity is the ratio $C/D$, which equals unity on the
+constant-affinity graph and departs from unity only in the presence of
+triadic organisation. This gives the ratio an absolute reference point that
+$C$ lacks.
+The reference point can also be obtained empirically, without assuming
+constant affinity, by permuting the entries of the matrix from which $A$ is
+built: the permutation preserves the distribution of affinity values exactly
+and destroys only their arrangement, so any excess of $C/D$ above the
+permuted value is attributable to arrangement. In the weight-matrix
+construction discussed below, twenty-eight such permutation nulls return
+$C/D$ equal to $1.0000$ to four decimal places, in agreement
+with~\eqref{eq:excess}.
+\end{remark}
+
+\begin{remark}[A construction under which the index is degenerate]
+\label{rem:doubly_stochastic}
+Two of the four factors are not merely size-dependent, as
+Remark~\ref{rem:comparability} records, but can be made structurally
+constant by a choice of construction, and it is worth stating the one case in
+which this makes $\Omega$ inevaluable. Suppose $A$ is scaled to be doubly
+stochastic with zero diagonal, as is standard practice in spectral
+clustering. Then $\mathbf{k} = A\mathbf{1} = \mathbf{1}$, so
+$\mathrm{Coex} = \mathrm{Var}(\mathbf{k}) = 0$ exactly; and
+$\sum_{ij} A_{ij} = n$, so $D = 1/(n-1)$, a constant of the order alone.
+The index~\eqref{eq:fsri} therefore has a vanishing denominator and is not
+defined, while the well-defined content of that construction is the ratio
+$C/M$. This is a scope condition on Section~\ref{sec:applications} rather
+than a defect: it says that $\Omega$ presupposes a construction in which the
+degree sequence is free to vary, and it identifies $C$ and $M$, which are
+also the two factors that
+Section~\ref{sec:limitations} finds least dependent on sampling effort, as
+the pair that survives when it is not.
+\end{remark}
+
+\begin{remark}[Which factor moves when the index is used as a training penalty]
+The four factors above are all well-defined properties of a given weighted
+graph, and the index is descriptive as stated. A separate, narrower
+observation concerns the \emph{specific} case where $\Omega$ is minimised as a
+regulariser during LLM fine-tuning, under the pseudo-adjacency construction
+$A=\sigma(|WW^\top|)$ used in the applied work~\cite{acedo2026omegas}. There, a
+direct measurement finds that the clustering factor $C$ does not move, so a
+gradient-based optimiser can only act on $\mathrm{Coex}$.
+
+A subsequent measurement over twenty-eight attention projection matrices of
+an eight-billion-parameter decoder model refines the reason, and the refined
+statement is both stronger and more specific than the one we gave
+previously. The off-diagonal entries of $|WW^\top|$ are small rather than
+large, with a median near $0.07$, so the logistic map does not pin the
+affinities near its ceiling; it collapses them onto the midpoint of its
+range, and $C$ is measured at $0.51$ rather than at $1$. The consequence is
+sharper than saturation. Read through
+Proposition~\ref{prop:excess}, a clustering value equal to the mean affinity
+is what a graph with no triadic organisation returns, and the measured excess
+$C/D$ on that construction is $1.0000$, equal to its permutation null to four
+decimal places, in every module tested. The factor is not pinned at a
+ceiling: the constructed adjacency carries no triadic content over its
+density at all. Consistently with this, the dimensionless sensitivity of
+$\operatorname{Tr}(A^3)$ to $W$ under that construction is zero at working
+precision in at least one of the modules measured.
+
+Two further points complete this. The first is a discrepancy between how the
+construction is described and how it is implemented, which the applied
+work~\cite{acedo2026omegas} now reports and which we repeat here because the
+description above inherits it: the reference implementation forms
+$\sigma(|WW^\top|)$ only when $W$ is non-square, and applies $\sigma(|W|)$
+elementwise when it is square. The measurements quoted above used one module
+of each kind. The degree-variance factor differs by roughly a factor of $400$
+between the two branches on the square module measured, so the two are not
+interchangeable, and any reimplementation should fix the branch deliberately.
+
+The second is that the contrast-preserving construction, which an earlier
+version of this remark offered as the obvious repair, has since been built and
+evaluated. A row-wise cosine affinity does what it was designed to do: the
+measured excess $C/D$ rises from $1.0000$ to a median of $1.36$ across the same
+twenty-eight modules, the clustering factor moves off the value predicted by
+Proposition~\ref{prop:excess} for an unstructured graph, and the sign of the
+penalty controls the direction of movement during training in every module
+tested. And retention becomes \emph{worse}, on all ten seeds of the applied
+protocol. The inert clustering channel was therefore not a defect suppressing
+the method's effect, and we record the negative outcome rather than leave the
+repair standing as an open suggestion. The consequence for this paper is
+narrow but worth stating: the identification of $\mathcal{T}$ with structural
+monopoly is a property of the functional, and the empirical fact that
+activating the clustering channel does not improve the applied outcome bears
+on the regulariser, not on Propositions~\ref{prop:spectral_identity}
+and~\ref{prop:node_nonspectral}.
+\end{remark}
+
+\begin{remark}[Whether the operative factor reduces to row norms]
+A second measurement in the applied work bears on the same point. Since the
+operative factor there is $\mathrm{Coex}$, the variance of the degree sequence,
+and a node's degree correlates strongly with the norm of the corresponding
+weight row, the natural objection is that the effect reduces to equalising
+those norms. A control that penalises only row-norm variance, swept on a grid
+of its own rather than borrowed from another arm, does not reliably improve
+retention over no regularisation at all, while the full index penalty exceeds
+that control on 8 of 10 seeds. The factor carrying the effect is therefore
+$\mathrm{Coex}$ as computed on the weight graph, and not the row norms with
+which it is correlated, though at ten seeds that separation is suggestive
+rather than conclusive.
+
+Two further points should be recorded because they bound the objection more
+precisely than the control arm does. First, the association is not incidental
+to the construction but mechanical in it: under $A = \sigma(|WW^\top|)$ the
+degree of a node contains the squared norm of its own row through the
+diagonal of $WW^\top$, and the rank correlation between a node's degree and
+its row norm, measured within modules on the same twenty-eight matrices, is
+$+0.61$ in the median and positive in all of them, the smallest value being
+$+0.10$. An association that holds in every module with a common sign is
+structural, not a sampling artefact, and the honest reading is that on this
+construction the concentration channel and the row-norm distribution are
+close to interchangeable. Second, that mechanical component is a property of
+the construction and not of the factor: an affinity construction in which
+each node's own scale is divided out before the product is formed makes the
+node's degree \emph{provably} invariant to the norm of its own row, since
+rescaling a row leaves every pairwise affinity unchanged. Under such a
+construction any residual association can only reflect covariation between
+norm and direction in the weights themselves, and is measured to change sign.
+We state the property rather than the construction, which belongs to the
+applied work.
+\end{remark}
+
+\begin{remark}[Direction of the clustering factor]
+\label{rem:direction}
+A reader who substitutes~\eqref{eq:clustering} into~\eqref{eq:fsri} will
+notice that $\Omega$ is linear in $\operatorname{Tr}(A^3)$ and carries it
+in the \emph{numerator}, so lowering $\operatorname{Tr}(A^3)$ lowers
+$\Omega$. Read literally, minimising the topological pressure would
+therefore move a network toward the end of the index that the index
+itself calls fragile. We state the tension rather than leave it for the
+reader to find. It is resolved by observing that a high
+$\operatorname{Tr}(A^3)$ is ambiguous: triangles distributed across the
+graph give $C$ high and $\mathrm{Coex}$ low, hence $\Omega$ high,
+whereas the same triangle count concentrated on a hub and its core gives
+$C$ high and $\mathrm{Coex}$ high, hence $\Omega$ low. What
+distinguishes the two configurations is $\mathrm{Coex}$, in the
+denominator, and not $\operatorname{Tr}(A^3)$ on its own. In the applied
+setting the composite objective is observed to reduce degree variance
+substantially, so the equivalence between minimising
+$\operatorname{Tr}(A^3)$ and suppressing structural monopoly rests on
+that \emph{measured} reduction and not on the algebra of $\Omega$, which
+by itself does not deliver it.
+
+There is a second reading of the same tension, which we record because it
+locates a limit of the composite rather than a defect of the functional. The
+numerator of $\Omega$ treats triadic closure as a benefit and the penalty of
+Section~\ref{sec:omega_s} treats it as a cost, and both readings are defensible
+in their own regime. That is the structure of a two-sided constraint on
+connectivity, and Remark~\ref{rem:window} sets out what the index as composed
+does and does not express about it.
+\end{remark}
+
+\begin{proposition}[Discriminative Power]
+\label{prop:discriminative}
+On synthetic networks with $N = 50$ nodes and matched edge count, drawn from
+the preferential-attachment~\cite{barabasi1999} and small-world~\cite{watts1998}
+families and from the ring lattice, the FSRI
+of Definition~\ref{def:fsri} orders topologies as
+\[
+\Omega_{\text{ring}} \to \infty \;\gg\; \Omega_{\text{WS}} \approx 0.049
+\;\gg\; \Omega_{\text{ER}} \approx 0.0031 \;\gtrsim\;
+\Omega_{\text{BA}} \approx 0.0018,
+\]
+a separation of one and a half orders of magnitude among the finite values.
+\end{proposition}
+
+The three finite entries are medians over forty seeds, with ranges
+$[0.029, 0.092]$, $[0.0013, 0.0064]$ and $[0.0013, 0.0025]$ respectively; the
+order between the two sparse random families is therefore not stable at the
+level of an individual seed, while the separation of both from Watts-Strogatz
+is. The separation is carried by the concentration factor, whose median values
+across the same seeds are $0.58$, $4.88$ and $16.46$: the index is reading
+degree concentration, which is what the proposition is meant to establish.
+
+The ring lattice requires a word, because its entry is a divergence and not a
+large number. A $K$-regular ring has $\mathrm{Coex} = \mathrm{Var}(\mathbf{k})
+= 0$ identically, so the denominator of~\eqref{eq:fsri} vanishes and $\Omega$
+is not defined. This is the degenerate case of Remark~\ref{rem:doubly_stochastic} and
+it agrees with the divergence at $p \to 0$ derived independently in
+Proposition~\ref{prop:ws_exact}. We record it as a divergence rather than
+substituting a numerical floor for the vanishing variance, because the value
+such a substitution returns is fixed by the floor and not by the graph. The
+consequence for how the finite entries should be read is that they measure
+distance from an unattainable regular ideal rather than position on a bounded
+scale, and that the index saturates at the egalitarian end. That saturation is
+the same property discussed in Remark~\ref{rem:window}, reached here from the
+elementary direction.
+
+\subsection{Topological Pressure and the Gradient of Tr$(A^3)$}
+
+The key analytical result connecting $\mathcal{T}$ to structural
+monopoly is:
+
+\begin{theorem}[Topological Pressure Gradient]
+\label{thm:pressure_gradient}
+The gradient of the topological pressure functional with respect to the
+adjacency matrix is:
+\begin{equation}
+\frac{\partial}{\partial A_{ij}} \operatorname{Tr}(A^3) = 3(A^2)_{ij}.
+\label{eq:gradient}
+\end{equation}
+The entry $(A^2)_{ij} = \sum_k A_{ik}A_{kj}$ counts the number of
+paths of length 2 between nodes $i$ and $j$, i.e., the number of
+common neighbours. High $(A^2)_{ij}$ indicates that the edge $(i,j)$
+participates in many triangles and therefore contributes
+disproportionately to the clustering structure.
+\end{theorem}
+
+\begin{proof}
+Direct computation: $\frac{\partial}{\partial A_{ij}}
+\operatorname{Tr}(A^3) = \frac{\partial}{\partial A_{ij}}
+\sum_{klm} A_{kl}A_{lm}A_{mk} = 3(A^2)_{ij}$,
+using the symmetry of $A$ and the cyclicity of trace.
+\end{proof}
+
+\begin{definition}[Topological Pressure Distribution]
+The \emph{topological pressure} on edge $(i,j)$ is $\pi_{ij} = 3(A^2)_{ij} \cdot A_{ij}$.
+The \emph{topological pressure Gini coefficient} $G(\pi)$ measures
+the inequality of this distribution across edges.
+\end{definition}
+
+Our experiments demonstrate (Table~\ref{tab:pressure}):
+
+\begin{table}[ht]
+\centering
+\caption{Topological pressure distribution by network type ($N=40$).}
+\label{tab:pressure}
+\begin{tabular}{lcccc}
+\toprule
+Network type & Max pressure & Mean pressure & Gini ($G$) & $\mathcal{T}/N^3$ \\
+\midrule
+Barabási-Albert (monopoly) & 15.00 & 4.03 & 0.986 & 0.00478 \\
+Ring lattice (uniform)     & 12.00 & 9.00 & 0.272 & 0.01125 \\
+\midrule
+Ratio (monopoly/uniform)   & 1.25× & 0.45× & \textbf{3.6×} & 0.42× \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Gini coefficient of topological pressure is the sharpest
+discriminator: monopoly networks have near-perfect pressure
+concentration ($G = 0.986$), while uniform networks distribute
+pressure evenly ($G = 0.272$).
+
+\subsection{Hutchinson Estimation of $\mathcal{T}(W)$}
+
+For large weight matrices, exact computation of $\operatorname{Tr}(A^3)$
+requires $\mathcal{O}(N^3)$ operations. The Hutchinson stochastic trace
+estimator~\cite{hutchinson1990} provides an unbiased $\mathcal{O}(N^2)$
+approximation:
+\begin{equation}
+\widehat{\operatorname{Tr}}(A^3) = \frac{1}{n_p} \sum_{i=1}^{n_p}
+\mathbf{z}_i^\top A^3 \mathbf{z}_i,
+\label{eq:hutchinson}
+\end{equation}
+where $\mathbf{z}_i \sim \text{Rad}(\pm 1)$ are Rademacher probe vectors
+and $A^3 \mathbf{z} = W(W^\top (W(W^\top (W(W^\top \mathbf{z})))))$
+is computed without materialising $A$.
+
+\subsection{Spectral Identity and the Locus of Non-Spectral Information}
+\label{sec:spectral}
+
+A question that determines how $\mathcal{T}$ should be positioned relative
+to spectral methods is whether $\operatorname{Tr}(A^3)$ carries information
+beyond the eigenvalue spectrum of $A$. The answer is negative for the global
+functional and positive for its node-wise decomposition, and the distinction
+is sharp.
+
+\begin{proposition}[The global functional is spectral]
+\label{prop:spectral_identity}
+For symmetric $A$ with eigenvalues $\{\lambda_i\}$,
+\begin{equation}
+\operatorname{Tr}(A^3) = \sum_i \lambda_i^3 .
+\label{eq:third_moment}
+\end{equation}
+\end{proposition}
+\begin{proof}
+Immediate from the spectral decomposition $A = V\Lambda V^\top$ with
+$V$ orthogonal: $\operatorname{Tr}(A^3) = \operatorname{Tr}(V\Lambda^3V^\top)
+= \operatorname{Tr}(\Lambda^3)$.
+\end{proof}
+
+$\mathcal{T}(W)$ is therefore \emph{exactly the third moment of the
+spectrum}, a spectral statistic in the same family as the Absorption
+Ratio (leading-eigenvalue mass), effective rank and the Vendi score
+(spectral entropies). Any two of these are functionals of the same
+$\{\lambda_i\}$ and cannot, in general, be expected to carry mutually
+exclusive information. We state this explicitly because it corrects a
+framing of ``topological'' as opposed to ``spectral'' that the
+triangle-counting interpretation invites but that
+Eq.~\eqref{eq:third_moment} forbids at the level of the global scalar.
+
+The non-spectral content appears one level down. Writing
+$A = \sum_k \lambda_k \mathbf{v}_k\mathbf{v}_k^\top$, the node-wise
+decomposition of the topological pressure is
+\begin{equation}
+(A^3)_{ii} = \sum_k \lambda_k^3\, (v_k)_i^2 ,
+\label{eq:node_decomp}
+\end{equation}
+which depends on the \emph{eigenvectors}, not on the spectrum alone.
+
+\begin{proposition}[The node decomposition is not spectrally determined]
+\label{prop:node_nonspectral}
+There exist cospectral graphs $G_1 \not\cong G_2$ with
+$\operatorname{Tr}(A_1^3) = \operatorname{Tr}(A_2^3)$ but
+$\operatorname{diag}(A_1^3) \neq \operatorname{diag}(A_2^3)$ up to
+permutation.
+\end{proposition}
+\begin{proof}
+By explicit construction. Exhaustive search over graphs on six vertices
+yields a cospectral pair with common spectrum
+$\{-1.9032,\,-1,\,-1,\,0.1939,\,1,\,2.7093\}$ and, necessarily by
+Proposition~\ref{prop:spectral_identity}, common
+$\operatorname{Tr}(A^3) = 12$, yet node-wise triangle counts
+$\operatorname{diag}(A_1^3) = (4,2,2,2,2,0)$ and
+$\operatorname{diag}(A_2^3) = (2,2,4,4,0,0)$, which differ as multisets.
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.80\textwidth]{figure2_cospectral.pdf}
+\caption{The counterexample of Proposition~\ref{prop:node_nonspectral}. Both
+graphs have the same eigenvalues and therefore, by
+Proposition~\ref{prop:spectral_identity}, the same
+$\operatorname{Tr}(A^3) = 12$. Their node-wise decompositions differ as
+multisets, so $\operatorname{diag}(A^3)$ is not a function of the spectrum.
+The pair is located by exhaustive search in the accompanying code rather than
+asserted, and node labels are computed rather than drawn.}
+\label{fig:cospectral}
+\end{figure}
+
+\begin{corollary}[Locus of the contribution]
+\label{cor:locus}
+The global index $\mathcal{T}$ is spectrally redundant: it can be matched
+by other spectral functionals and should not be expected to dominate them
+as a scalar detector. The node-wise field $\operatorname{diag}(A^3)$ is
+not a function of the spectrum, and is therefore the component of the
+framework that no eigenvalue-based scalar can reproduce.
+\end{corollary}
+
+Corollary~\ref{cor:locus} makes a prediction that is testable in any domain
+where the framework is applied as a detector: the global scalar should tie
+sharpened spectral baselines rather than beat them, while the node-wise
+attribution, being parameter-free unlike eigenvector attribution, which
+requires committing to a number of components $k$, should do better when the
+number of structural epicentres is unknown. We state it as a prediction here.
+A companion paper applying the index to financial correlation networks reports
+a pattern consistent with it; that work uses a different composition of the
+same four factors from the one in Definition~\ref{def:fsri} and we are
+reconciling the two before treating its numbers as evidence for this
+corollary.
+
+\subsection{Signed Extension: Structural Balance}
+
+The construction above uses $A = |{\cdot}|$ throughout, which discards the
+sign of the underlying interaction. On a signed adjacency matrix
+$A \in [-1,1]^{n\times n}$ the same functional acquires a different
+meaning:
+\begin{equation}
+\operatorname{Tr}(A^3) = 6\,(\#\text{balanced triangles} -
+\#\text{unbalanced triangles}),
+\end{equation}
+since a 3-cycle contributes $+|A_{ij}A_{jk}A_{ki}|$ when the product of
+signs is positive and $-|A_{ij}A_{jk}A_{ki}|$ otherwise.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.92\textwidth]{figure3_signed.pdf}
+\caption{Structural balance. The left and centre triangles carry the same
+edge magnitudes and differ only in one sign, yet
+$\operatorname{Tr}(A^3)$ separates them completely. Taking $|A|$, as the
+unsigned framework and every spectral index computed on $|A|$ do, collapses
+both to the graph on the right and destroys the distinction.}
+\label{fig:signed}
+\end{figure} This is exactly
+Heider's structural balance~\cite{cartwright1956}, and it is invisible to
+any functional of $|A|$, including all spectral indices computed on
+$|A|$ and the unsigned $\mathcal{T}$ used in the rest of this paper.
+Two networks with identical $|A|$ and opposite balance structure are
+indistinguishable to the unsigned framework. Signed $\mathcal{T}$ is thus
+a strict generalisation carrying information no unsigned index can access;
+its behaviour in domains where sign is meaningful (ecological co-occurrence
+versus co-exclusion, hedging versus co-movement in finance) is left for
+future work.
+
+% ============================================================
+\section{Non-Equilibrium Thermodynamic Interpretation}
+% ============================================================
+
+\subsection{Prigogine's Theorem and Topological Entropy Production}
+
+Prigogine's theorem states that in a linear non-equilibrium system
+with fixed external constraints, the stationary state minimises the
+rate of entropy production~\cite{prigogine1967,klein1954}. A rigorous
+proof via network Markov chains was given by~\cite{schnakenberg_nets},
+who showed that in networks with fixed boundary conditions, steady
+states satisfy a minimum entropy production principle through
+Schnakenberg's cycle observables.
+
+\begin{remark}[Scope of Prigogine's Theorem]
+Prigogine's theorem holds strictly in the \emph{linear} regime of
+irreversible thermodynamics (near equilibrium, Onsager relations
+valid). Extensions to non-linear regimes are contested~\cite{prigogine_critical},
+and the principle can fail for strongly driven systems. We apply it
+here as a \emph{guiding analogy} in the linear regime of weight
+updates near a training fixed point, not as a rigorous claim about
+arbitrary training dynamics.
+\end{remark}
+
+\begin{definition}[Topological Entropy Production Rate]
+\label{def:tep}
+For a network with weight matrix $W$, the topological entropy production
+rate is:
+\begin{equation}
+\dot{S}_{\mathrm{topo}} \propto \mathcal{T}(W) =
+\operatorname{Tr}(WW^\top)^3.
+\label{eq:entropy_prod}
+\end{equation}
+This quantity measures the rate at which topological structure is
+sustained through triangle-closing events, the network-theoretic
+analogue of dissipative structure formation in Prigogine's framework.
+\end{definition}
+
+The analogy is made precise as follows. In Prigogine's framework,
+a system far from equilibrium self-organises into a structured state
+(dissipative structure) that sustains itself through energy throughput.
+In a network under preferential attachment (analogous to energy
+abundance $E_\text{ext}$), hub nodes accumulate connections, creating
+structured but fragile configurations. Prigogine's theorem in network
+form~\cite{schnakenberg_nets} implies that the \emph{stationary}
+(minimum perturbation) configuration minimises $\dot{S}_\text{topo}$.
+
+\begin{proposition}[Gradient Flow as Prigoginian Dynamics]
+\label{prop:gradient_flow}
+The gradient flow:
+\begin{equation}
+\dot{W} = -\lambda_\Omega \nabla_W \mathcal{T}(W)
+= -6\lambda_\Omega \, (WW^\top)^2 W
+\label{eq:gradient_flow}
+\end{equation}
+drives the weight matrix toward configurations of lower topological
+entropy production. In the linear regime near a stationary point,
+this is equivalent to Prigogine's minimum entropy production principle
+applied to the space of weight configurations.
+
+Fixed points $\dot{W} = 0$ satisfy $(WW^\top)^2 W = 0$, which holds
+when $WW^\top$ has zero spectral radius on the support of $W$,
+i.e., weight matrices inducing triangle-free graphs (maximum entropy
+for given connection density).
+\end{proposition}
+
+\begin{proof}
+Write $A = WW^\top$. From Theorem~\ref{thm:pressure_gradient},
+$d\operatorname{Tr}(A^3) = 3\operatorname{Tr}(A^2\,dA)$, and
+$dA = dW\,W^\top + W\,dW^\top$, so
+\[
+d\operatorname{Tr}(A^3)
+= 3\operatorname{Tr}(A^2\,dW\,W^\top) + 3\operatorname{Tr}(A^2 W\,dW^\top)
+= 6\,\langle A^2 W,\, dW\rangle ,
+\]
+the two terms being equal by symmetry of $A$ and cyclicity of the
+trace. Hence
+\begin{equation}
+\nabla_W \operatorname{Tr}(WW^\top)^3 = 6\,(WW^\top)^2 W .
+\label{eq:grad_W}
+\end{equation}
+Note the order of the factors: for $W \in \mathbb{R}^{m \times n}$ the
+product $(WW^\top)^2 W$ is $m \times n$ and therefore conformable with
+$W$, whereas $W(WW^\top)^2$ is not defined unless $m = n$. The fixed
+point condition follows from $(WW^\top)^2 W = 0$.
+\end{proof}
+
+\begin{remark}[Connection to Maximum Caliber]
+Prigogine's minimum entropy production principle can be derived from
+the Maximum Caliber variational principle~\cite{maxcaliber2018} for
+near-equilibrium systems with two coupled flows. This provides a
+statistical mechanical foundation: the gradient flow~\eqref{eq:gradient_flow}
+is the most probable trajectory for a stochastic weight update process
+constrained to minimise topological entropy production.
+\end{remark}
+
+\subsection{Phase Transition in Triangle Density}
+
+Our experiments confirm the existence of a topological phase transition.
+Starting from an Erdős-Rényi network ($N=60$, $p=0.08$) and
+progressively adding triangles via the fugacity mechanism
+of~\cite{motif2026}, we observe:
+\begin{itemize}
+\item $\mathcal{T}/N^3$ increases monotonically from $1.94 \times 10^{-4}$
+      (zero triangles) to $1.48 \times 10^{-2}$ (200 triangles added),
+      a $76\times$ increase.
+\item The degree entropy $S = -\sum_k p_k \log p_k$ increases from
+      $1.95$ to $2.70$ as triangles are added, reflecting growing
+      degree heterogeneity.
+\item This is consistent with the theoretical prediction that
+      triangle-rich phases exhibit heavy-tailed degree distributions
+      with power-law exponents~\cite{motif2026}.
+\end{itemize}
+
+\begin{remark}[On the Proportionality $\Omega \propto (S_\text{env}/E_\text{ext})^2$]
+An earlier formulation of this framework by the author proposes
+$\Omega \propto (S_\text{env}/E_\text{ext})^2$. Our experiments on Watts-Strogatz networks
+yield $r = -0.407$, suggesting the relationship is not a simple proportionality.
+We now derive the exact form analytically.
+\end{remark}
+
+\begin{proposition}[Exact FSRI Formula for Watts-Strogatz Networks]
+\label{prop:ws_exact}
+For a Watts-Strogatz network with $n$ nodes, mean degree $K$, and
+rewiring probability $p \in (0,1)$, using the exact clustering formula
+$C(K,p) = \frac{3K-6}{4K-2}(1-p)^3$~\cite{barrat2000} and the
+variance approximation $\mathrm{Var}(k) \approx Kp(1-p)$ valid for
+$n \to \infty$:
+\begin{equation}
+\Omega(K,p) = \frac{3K-6}{4K-2} \cdot \frac{(1-p)^2}{np},
+\label{eq:omega_ws}
+\end{equation}
+where $D = K/(n-1)$, written as $K/n$ to leading order, and
+$\mathrm{Coex} = Kp(1-p)$. This formula achieves
+correlation $r = 0.9997$ against numerical simulation across
+$p \in [0.05, 0.9]$, $K = 6$, $N = 100$ (Table~\ref{tab:ws_validation}).
+
+\begin{table}[h]
+\centering
+\caption{Analytical against numerical $\Omega(K=6, N=100)$ in
+Watts-Strogatz, each simulated value the mean over 200 graphs. Produced by
+\texttt{colabs/fsri\_colab3\_orc\_ws.py} in the accompanying repository.}
+\label{tab:ws_validation}
+\begin{tabular}{cccc}
+\toprule
+$p$ & $\Omega$ analytical & $\Omega$ numerical & relative error \\
+\midrule
+0.05 & 0.098455 & 0.113740 & 13.4\% \\
+0.10 & 0.044182 & 0.050033 & 11.7\% \\
+0.20 & 0.017455 & 0.018315 & 4.7\% \\
+0.30 & 0.008909 & 0.008928 & 0.2\% \\
+0.50 & 0.002727 & 0.002925 & 6.8\% \\
+0.70 & 0.000701 & 0.001375 & 49.0\% \\
+0.90 & 0.000061 & 0.001088 & 94.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{remark}[What the correlation does and does not establish]
+\label{rem:ws_scope}
+The quoted $r = 0.9997$ is computed on levels that span three orders of
+magnitude, so it is dominated by the small-$p$ end of the range and is a
+weak test of agreement elsewhere. On the logarithms of the same seven points
+it is $0.9447$, and the last column of Table~\ref{tab:ws_validation} is the
+honest summary: the closed form is accurate to within fifteen per cent for
+$p \le 0.5$ and departs badly beyond it, reaching a factor of eighteen at
+$p = 0.9$.
+
+The departure is expected and is not a failure of~\eqref{eq:omega_ws}. It
+comes from the variance approximation $\mathrm{Var}(k) \approx Kp(1-p)$,
+which holds as $n \to \infty$; at $n = 100$ the finite-size correction grows
+with $p$, and at $p = 0.9$ the rewired graph retains almost none of the
+lattice structure the approximation assumes. Every use made of the formula
+in this paper is in the lattice-like regime of small $p$, where the table
+shows it to be accurate, and the divergence as $p \to 0$ that
+Proposition~\ref{prop:ws_exact} relies on sits at the accurate end.
+\end{remark}
+
+Setting $E_\mathrm{ext} = K$ (mean degree) and
+$S_\mathrm{env} = \sqrt{Kp(1-p)}$ (degree standard deviation), so that
+$(S_\mathrm{env}/E_\mathrm{ext})^2 = p(1-p)/K$ and hence
+$p(1-p) = S_\mathrm{env}^2/E_\mathrm{ext}$, equation~\eqref{eq:omega_ws} can be
+written exactly in terms of the thermodynamic variables. Multiplying
+numerator and denominator by $(1-p)$,
+\begin{equation}
+\boxed{\;\Omega \;=\; \frac{3K-6}{4K-2} \cdot \frac{(1-p)^3}{n}
+\cdot \frac{E_\mathrm{ext}}{S_\mathrm{env}^2}\;}
+\label{eq:exact_relation}
+\end{equation}
+which reproduces~\eqref{eq:omega_ws} identically.
+
+This shows three key results:
+\begin{enumerate}
+\item The ratio enters \emph{inverted}: $\Omega \propto E_\mathrm{ext} /
+  S_\mathrm{env}^2$ and not $S_\mathrm{env}^2/E_\mathrm{ext}^2$ as the earlier
+  formulation proposes. At fixed connectivity, more environmental stress
+  \emph{lowers} the index rather than raising it, and higher connectivity at
+  fixed stress raises it. The earlier formulation has the dependence the right
+  way round in neither variable.
+\item $\Omega$ still diverges as $p \to 0$ (pure lattice, maximum clustering),
+  consistent with the ring lattice having $\Omega \to \infty$ in our
+  experiments: the divergence is now carried by $S_\mathrm{env}^2 = Kp(1-p)$
+  in the denominator, which vanishes with $p$.
+\item The sign of the discrepancy with the earlier formulation is what the
+  measurements show. Because the ratio belongs in the denominator, the
+  empirical correlation between $\Omega$ and $(S_\mathrm{env}/E_\mathrm{ext})^2$
+  is \emph{negative} ($r = -0.407$ to $-0.573$) rather than weakly positive.
+  A proportionality would not produce a negative correlation of that size;
+  an inverse relation does.
+\item $\Omega \propto 1/n$ at fixed $K$ and $p$. The factor is visible
+  in~\eqref{eq:omega_ws} and is not an artefact of the Watts-Strogatz
+  parameterisation: it enters through $D = K/n$, which falls with the order
+  of the graph at fixed mean degree, and it is reinforced by
+  $\mathrm{Coex}$ whenever the degree distribution is heavy-tailed. The
+  formula therefore delimits the index as a \emph{comparative} statistic in
+  the sense of Remark~\ref{rem:comparability}: values of $\Omega$ obtained
+  on graphs of different order are not directly comparable, and every
+  comparison reported in this paper is at matched $n$.
+\end{enumerate}
+
+The factor $1/n$ isolated above is not irreducible: it is carried by two of
+the four factors, and both have a counterpart that does not carry it.
+
+\begin{definition}[Shape-normalised index]
+\label{def:shape}
+Let $G_k$ denote the Gini coefficient of the degree sequence
+$\mathbf{k} = A\mathbf{1}$ and $\bar{k}$ its mean. The shape-normalised
+index is
+\begin{equation}
+\widetilde{\Omega} = \frac{C \cdot \bar{k}}{M \cdot G_k},
+\label{eq:omega_tilde}
+\end{equation}
+obtained from~\eqref{eq:fsri} by replacing the connection density with the
+mean degree and the degree variance with the Gini coefficient of the same
+degree sequence.
+\end{definition}
+
+\begin{proposition}[The shape-normalised index is order-invariant on
+Watts-Strogatz graphs, at fixed $M$]
+\label{prop:shape_invariant}
+For Watts-Strogatz graphs with $n$ nodes, mean degree $K$ and rewiring
+probability $p$, and with the modularity factor $M$ held fixed, the quantity
+$\widetilde{\Omega}$ of Definition~\ref{def:shape} is a function of $K$ and
+$p$ alone and does not depend on $n$, whereas $\Omega$ carries an explicit
+factor $1/n$ by Proposition~\ref{prop:ws_exact}. The hypothesis on $M$ is not
+cosmetic and Remark~\ref{rem:residual_drift} measures what it costs.
+\end{proposition}
+
+\begin{proof}
+Each factor of~\eqref{eq:omega_tilde} is independent of $n$. The clustering
+coefficient is $C(K,p) = \frac{3K-6}{4K-2}(1-p)^3$~\cite{barrat2000},
+a function of $K$ and $p$. The mean degree is $\bar{k} = K$ by construction.
+The rewiring process acts independently on each edge with probability $p$,
+so the degree distribution of the Watts-Strogatz ensemble is determined by
+$K$ and $p$ and not by the order of the graph; $G_k$, being a functional of
+that distribution, is therefore also a function of $K$ and $p$. Taking $M$
+constant, as in Proposition~\ref{prop:ws_exact}, gives
+$\widetilde{\Omega} = \widetilde{\Omega}(K,p)$. By contrast
+$D = K/(n-1)$ carries $1/n$ explicitly, which is the origin of the factor
+$1/(np)$ in~\eqref{eq:omega_ws}.
+\end{proof}
+
+\begin{remark}[Why these two substitutions and not others]
+The proof uses two properties that hold beyond the Watts-Strogatz family.
+The Gini coefficient is scale-invariant, $G_k(c\mathbf{k}) = G_k(\mathbf{k})$
+for $c>0$, whereas $\mathrm{Var}(c\mathbf{k}) = c^2\mathrm{Var}(\mathbf{k})$
+and carries units of degree squared. The mean degree is intensive, whereas
+$D = \bar{k}/(n-1)$ is not. The substitution therefore replaces two
+quantities that depend on the scale of the degree sequence and on the order
+of the graph by two that depend only on the shape of that sequence. This is
+the general reason; Proposition~\ref{prop:shape_invariant} is the case in
+which it can be checked exactly. Numerically, on Watts-Strogatz graphs with
+$K=6$, $p=0.1$ and $n$ from $200$ to $6400$, the fitted slope of
+$\log_{10}\Omega$ against $\log_{10} n$ is $-0.987$, consistent with
+Proposition~\ref{prop:ws_exact}, while that of $\widetilde{\Omega}$ is
+$+0.009$. Both figures hold $M$ fixed, as
+Proposition~\ref{prop:shape_invariant} does.
+\end{remark}
+
+\begin{remark}[The residual drift, and where it comes from]
+\label{rem:residual_drift}
+Holding $M$ fixed is an idealisation, and on this family it is a false one:
+the algebraic connectivity of a Watts-Strogatz graph falls with its order, so
+$M = 1/\lambda_2(L)$ grows with $n$ and neither index is exactly
+order-invariant. Measured over forty graphs per point at $K=6$, $p=0.1$ and
+$n$ from $200$ to $1600$, with $M$ evaluated rather than fixed, the fitted
+slopes become $-1.160$ for $\log_{10}\Omega$ and $-0.160$ for
+$\log_{10}\widetilde{\Omega}$, against $-1.009$ and $-0.010$ for the same
+graphs with $M$ held fixed. The whole of the difference is $\lambda_2$, whose
+own slope is $-0.151$ on the same graphs; $C$, $\bar{k}$ and $G_k$ are flat to
+within a few parts in a hundred across the range.
+
+Two things follow. The substitution does most of what it is introduced to do,
+removing about seven eighths of the drift: a factor of roughly $14$ per decade
+of $n$ becomes a factor of roughly $1.4$. And it does not remove all of it,
+because the concentration factor is not the only one that carries the order of
+the graph. Restoring exact comparability would require a modularity factor
+that is itself order-invariant, which we do not have and do not claim; the
+comparisons reported in this paper are at matched $n$ for that reason.
+\end{remark}
+
+\begin{remark}[A third candidate for the concentration factor, with a
+dynamical rather than a dimensional justification]
+\label{rem:xi}
+The argument above justifies $G_k$ on grounds of scale: it is invariant where
+$\mathrm{Var}(\mathbf{k})$ is not. That argument says why the substitution
+restores comparability; it does not say why a concentration measure belongs in
+the denominator at all, which Remark~\ref{rem:factors} supplies only by
+ecological analogy. A third candidate carries both. Write
+\begin{equation}
+\xi \;=\; \frac{\langle k^2 \rangle}{\langle k \rangle^2}
+\;=\; 1 + \frac{\mathrm{Var}(\mathbf{k})}{\bar{k}^2}
+\;=\; 1 + \frac{\mathrm{Coex}}{\bar{k}^2},
+\label{eq:xi}
+\end{equation}
+the degree heterogeneity of the graph. It is $\mathrm{Coex}$ normalised by the
+square of the mean degree, hence dimensionless and scale-invariant like $G_k$;
+and it is the quantity for which degree heterogeneity is shown to destabilise
+ecological networks with competitive and mutualistic interactions, entering a
+stability criterion of the form
+\begin{equation}
+\sigma \sqrt{(S-1)\,\mathcal{C}\,\xi} \;<\; d
+\label{eq:yan}
+\end{equation}
+for a community matrix with $S$ species, self-regulation $d$ and interaction
+strengths of dispersion $\sigma$~\cite{yan2017}. We therefore record
+$\widetilde{\Omega}_\xi = C\bar{k}/(M\xi)$ as a variant of
+Definition~\ref{def:shape} on the same footing as the one stated there, and
+note that the two agree in direction while differing in how they weight the
+tail of the degree distribution.
+
+Two cautions attach to importing~\eqref{eq:yan}, and both are about scope
+rather than about $\xi$. The first is notational and easy to misread: in the
+stability literature $\mathcal{C}$ denotes \emph{connectance}, the fraction of
+realised links, which is the quantity written $D$ here, whereas $C$ in this
+paper is the clustering coefficient. Translated into the notation of
+Definition~\ref{def:fsri}, the criterion reads
+$\sigma\sqrt{(n-1)\,D\,\xi} < d$; it says nothing about triadic structure. The
+second is substantive. In that criterion connectance and heterogeneity enter
+as a \emph{product}, and increasing either is destabilising, whereas
+Definition~\ref{def:fsri} places $D$ in the numerator and the concentration
+factor in the denominator, so the two are composed as a ratio and move
+$\Omega$ in opposite directions. This is the long-standing tension between the
+analytical stability criteria descending from~\cite{may1972,allesina2012} and
+the empirical finding that connectivity accompanies function and
+robustness~\cite{wagg2019,morrien2017,yuan2021}, and the two are not
+measuring the same notion of stability: the criterion concerns local
+asymptotic stability of a randomly parameterised community matrix, whereas the
+evidence behind the numerator of~\eqref{eq:fsri} concerns functional
+redundancy measured on ecosystem processes. We take from~\cite{yan2017} the
+justification of the concentration factor and its normalisation, and not the
+composition of the index, and we state the difference rather than let the
+citation imply an endorsement it does not carry.
+\end{remark}
+
+\begin{remark}[Connectivity as a two-sided constraint, and what the index does
+not express]
+\label{rem:window}
+Three independent lines converge on a statement the index as composed does not
+make. In the stability criteria discussed above, connectance enters as a
+destabilising quantity~\cite{may1972,allesina2012,yan2017}. In communication
+graphs among language-model agents, reliability imposes a minimum degree and
+error propagation a maximum, so that the admissible graphs occupy an interval
+that may be empty~\cite{niu2026}. And in the ecological literature from which
+this framework derives, the same shape has a name: Ulanowicz's window of
+vitality, in which a flow network persists only in an intermediate band between
+too little organisation, which leaves it incoherent, and too much, which leaves
+it brittle for want of redundant pathways~\cite{ulanowicz2009}.
+
+Definition~\ref{def:fsri} is monotone in each of its factors, and in $D$ in
+particular. It therefore expresses one edge of such a window and not the window
+itself: it says which direction is the resilient one, not where the direction
+reverses. This is a limitation of the composite and not of the underlying
+functional, since nothing in Propositions~\ref{prop:spectral_identity}
+or~\ref{prop:node_nonspectral} depends on how the four factors are combined.
+It also identifies the natural extension: an
+index with an interior optimum in connectivity would require a second term
+penalising excess, of the kind that the overhead side of the ascendency
+decomposition supplies. Appendix~\ref{app:ascendency} carries that transplant
+out exactly for the setting of this paper, and reports both what it delivers, a
+closed form and a point prediction for the optimal degree, and what it does
+not, since the resulting order parameter turns out to be a functional of the
+degree sequence alone and therefore blind to wiring. We record the convergence because the three sources
+share no method, and because agreement across epidemiology, random-matrix
+stability and information-theoretic ecology is the kind of evidence a purely
+structural argument cannot supply on its own.
+
+One consistency check belongs here, because it delimits the reading rather than
+weakening it. The four families of Proposition~\ref{prop:discriminative} are
+compared at matched order and matched edge count, hence at matched mean degree,
+and an information-theoretic order parameter computed on them separates them
+hardly at all. The comparison that Proposition~\ref{prop:discriminative} reports
+is therefore one of arrangement at fixed connectivity, which is the regime in
+which the index is well posed. The limitation stated above concerns comparisons
+made \emph{across} levels of connectivity, and no result of this paper makes
+one.
+\end{remark}
+
+\begin{remark}[When the shape-normalised index is exact, and how to check it
+in advance]
+\label{rem:densification}
+Proposition~\ref{prop:shape_invariant} replaces $D$ by $\bar{k}$ on the
+grounds that the mean degree is intensive. That premise is not automatic on a
+growing graph. If the edge count scales with the order as $m \sim n^{\delta}$,
+then $\bar{k} = 2m/n \sim n^{\delta - 1}$ and $D \sim n^{\delta-2}$, so the
+substitution is exact precisely when $\delta = 1$ and leaves a residual
+exponent of order $\delta - 1$ otherwise. Real growing graphs are observed to
+densify, with $\delta$ typically between $1$ and $2$~\cite{leskovec2005}, so
+the residual is generally not zero: on the syntactic networks of
+Section~\ref{sec:limitations} the two accumulation exponents give
+$\delta = \beta_E/\beta_V = 0.955/0.77 = 1.24$, hence a predicted residual of
+$+0.24$ per decade of order in $\bar{k}$, which is what is measured there.
+
+The practical consequence is that $\widetilde{\Omega}$ carries its own
+applicability condition, and one that can be checked before the index is
+applied and without any additional data: $\delta$ is the slope of
+$\log m$ against $\log n$ across the units to be compared, and both quantities
+are already needed to compute $D$. Where $\delta$ is close to one the
+substitution removes the order dependence almost entirely; where the graph
+densifies strongly the substitution over-corrects, replacing a factor that
+falls with $n$ by one that rises with it, and the shape argument of
+Remark~\ref{rem:shape_scope} should not be expected to hold. We state the
+condition as a prediction of the scaling argument; a systematic measurement
+across families with different $\delta$ is left open.
+\end{remark}
+
+\begin{remark}[What Proposition~\ref{prop:shape_invariant} does not cover]
+\label{rem:shape_scope}
+Watts-Strogatz graphs have homogeneous degrees. The proposition establishes
+invariance to the order of a given graph; it does not establish invariance
+under a change of \emph{sampling} effort when the graph is estimated and its
+degree distribution is heavy-tailed, which is the situation measured in
+Section~\ref{sec:limitations}. The analytical and the empirical statements
+agree in direction and are not the same claim. Nor does
+$\widetilde{\Omega}$ inherit the ecological reading of $\mathrm{Coex}$ as a
+degree variance: the Gini coefficient is a concentration measure of the same
+sequence, so the reading transfers as one of inequality rather than of
+variance.
+\end{remark}
+
+\end{proposition}
+
+% ============================================================
+\section{Curvature Interpretation: Triangles and Ollivier-Ricci Bounds}
+\label{sec:orc_graphs}
+% ============================================================
+
+
+Before formalising that connection it is worth naming the closest
+application of this curvature to the problem the framework addresses. Sandhu,
+Georgiou and Tannenbaum~\cite{sandhu2016} compute Ollivier-Ricci curvature on
+financial correlation networks as an indicator of market fragility and systemic
+risk: the same construction and the same purpose as the financial embodiment of
+this family, reached from discrete geometry rather than from triadic structure.
+A subsequent analysis~\cite{expost2024} argues that the indicator identifies the
+size and duration of a crisis accurately but does not lead it, that is that it
+is an ex-post descriptor rather than an early warning. The same curvature has
+since been applied to market instability with an explicitly network-geometric
+reading~\cite{samal2021}, and, outside finance, as the basis of a community
+detection method~\cite{sia2019}, which is a second use of the same local
+quantity for a global structural purpose. Both bear on what
+follows. The bound of Theorem~\ref{thm:orc_upper} relates the same
+common-neighbour counts that the curvature reads, so the two are not
+independent measurements of a network; and the ex-post limitation is a property
+of that reading which a triadic reading does not automatically escape. We note
+also that the relation between Ollivier-Ricci curvature and the spectrum of the
+normalised Laplacian is established~\cite{bauer2012}, which places the curvature
+of this section in the same spectral neighbourhood as
+Proposition~\ref{prop:spectral_identity} rather than outside it.
+
+The connection to differential geometry is formalised through the
+\emph{Ollivier-Ricci curvature}~\cite{ollivier2009}, a discrete
+analogue of Riemannian sectional curvature for metric spaces:
+\begin{equation}
+\kappa(x, y) = 1 - \frac{W_1(\mu_x, \mu_y)}{d(x,y)},
+\label{eq:ricci}
+\end{equation}
+where $W_1$ is the Wasserstein-1 (earth-mover) distance between
+the probability measures $\mu_x$, $\mu_y$ over neighbours of $x$
+and $y$, and $d(x,y)$ is the graph distance.
+
+\begin{proposition}[ORC and Triangle Density]
+\label{prop:orc_triangles}
+For a graph $G$ with adjacency matrix $A$ and uniform random-walk
+measures $\mu_x(y) = A_{xy}/\deg(x)$, the Ollivier-Ricci curvature of
+an edge $(x,y)$ is controlled by the number of common neighbours
+$t_{xy} = |N(x) \cap N(y)|$, which is exactly the contribution of that
+edge to $\operatorname{Tr}(A^3) = \sum_{(x,y) \in E} 2\,t_{xy}$. The
+corresponding upper bound is Theorem~\ref{thm:orc_upper}; the condition
+under which the curvature is non-negative is
+Proposition~\ref{prop:orc_nonneg}.
+\end{proposition}
+
+\begin{theorem}[ORC Upper Bound]
+\label{thm:orc_upper}
+Let $t_{xy} = |N(x) \cap N(y)|$ denote the number of common
+neighbours of $x$ and $y$, and let $d_x = \deg(x)$, $d_y = \deg(y)$.
+Then:
+\begin{equation}
+\kappa(x,y) \leq \frac{t_{xy}}{\min(d_x, d_y)}.
+\label{eq:orc_upper}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The optimal coupling between $\mu_x$ and $\mu_y$ matches each
+common neighbour $z \in N(x) \cap N(y)$ at zero transport cost.
+The minimum coupling assigns at most $t_{xy}/\min(d_x, d_y)$ of the
+total mass at zero cost, so
+$W_1(\mu_x, \mu_y) \geq 1 - t_{xy}/\min(d_x, d_y)$,
+giving $\kappa(x,y) \leq t_{xy}/\min(d_x, d_y)$.
+\end{proof}
+
+\begin{remark}[On the Lower Bound]
+\label{rem:lower_bound}
+It is natural to conjecture a matching lower bound
+$\kappa(x,y) \geq t_{xy}/\max(d_x,d_y) - |d_x-d_y|/\max(d_x,d_y)$.
+We report that it does not hold in general. Numerical experiments with
+exact Wasserstein-1 computation on Erdős-Rényi and Barabási-Albert
+networks show it fails in networks with sparse triangle structure: when
+$t_{xy} = 0$ on most edges, many non-common neighbours lie
+at geodesic distance $> 1$, making the actual transport cost
+higher than the bound assumes. The correct lower bound in full
+generality requires bounding the geodesic distances between
+non-common neighbours, a condition that holds for
+triangle-rich networks (clustering coefficient $C > 0.3$)
+but fails for sparse random graphs. Establishing tight lower
+bounds for arbitrary graphs is left as an open problem.
+\end{remark}
+
+\begin{proposition}[Non-negativity Condition for Lin-Lu-Yau Curvature]
+\label{prop:orc_nonneg}
+Let $\{x,y\} \in E(G)$ with $d_x = \deg(x) < d_y = \deg(y)$, let
+$\Delta = N(x) \cap N(y)$ and $\delta = |\Delta|$, and write
+$A = N(x)\setminus N[y]$ and $B = N(y)\setminus N[x]$.
+By~\cite{lly2026nonreg} (Theorem~1.2), if
+\begin{equation}
+\delta \geq \frac{2d_x d_y - 2d_x - 2d_y}{d_y + 2d_x},
+\label{eq:lly_nonneg}
+\end{equation}
+then the Lin-Lu-Yau Ricci curvature~\cite{lin2011}
+$\kappa^{\mathrm{LLY}}(x,y) \geq 0$.
+Moreover, $\kappa^{\mathrm{LLY}}(x,y) > 0$ unless simultaneously:
+(i) equality holds in~\eqref{eq:lly_nonneg},
+(ii) there are no edges between $\Delta$ and $B$, and
+(iii) $\mathrm{dist}(u,w) = 3$ for all $u \in A$, $w \in B$.
+
+\textbf{Remark.} Condition~\eqref{eq:lly_nonneg} makes non-negative curvature
+sufficient once the common neighbourhood is \emph{large} relative to the
+degrees: the right-hand side grows like $2d_x/3$ when $d_y$ is much the larger
+of the two, so the condition asks the edge to close a number of triangles
+comparable to the degree of its lower-degree endpoint. The hypothesis
+$d_x < d_y$ is strict in~\cite{lly2026nonreg}, so the statement does not
+specialise to regular graphs, for which the exact formulas of that work
+(Theorem~1.1) apply instead.
+
+The general bounds on $\kappa^\alpha(x,y)$ for all $\alpha \in [0,1]$ and
+arbitrary degree sequences are given by Theorem~5.3 of~\cite{lly2026nonreg},
+which extends earlier results of Jost-Liu~\cite{jost2014} to non-regular graphs.
+
+\textbf{Connection to Tr$(A^3)$.} The condition~\eqref{eq:lly_nonneg}
+depends on $\delta = t_{xy}$, the same common-neighbour count that
+determines the local contribution to $\operatorname{Tr}(A^3) =
+\sum_{(x,y)\in E} 2 t_{xy}$, and it points the same way as
+Theorem~\ref{thm:orc_upper}: triangle-rich edges are the ones whose curvature
+is non-negative. Edges satisfying~\eqref{eq:lly_nonneg}
+contribute non-negatively to the total Ollivier-Ricci curvature,
+while edges with $\delta < \frac{2d_x d_y - 2d_x - 2d_y}{d_y + 2d_x}$
+are the ones that may have $\kappa < 0$ and act as topological bridges. Those
+are the edges that close few triangles and therefore contribute little to
+$\operatorname{Tr}(A^3)$, so the curvature reading and the triadic one agree on
+which edges are which. What they do \emph{not} agree on is the direction of the
+composite: a triangle-poor bridge is a negative-curvature edge, and it is the
+distribution of the triangles across nodes, read by $\mathrm{Coex}$ rather than
+by $\operatorname{Tr}(A^3)$ alone, that carries the monopoly signature
+(Remark~\ref{rem:direction}).
+\end{proposition}
+
+\begin{corollary}[Threshold for Positive Total Curvature]
+\label{cor:positive_total}
+The upper bound $\Sigma\kappa^+ \leq \operatorname{Tr}(A^3)/(2d_{\min})$
+holds on every network in Table~\ref{tab:orc_bounds}. It is an
+inequality and not an estimate: edges satisfying~\eqref{eq:lly_nonneg}
+contribute non-negatively to $\Sigma\kappa^+$, whereas edges with
+$\kappa < 0$ contribute nothing to it while their triangles still
+enter $\operatorname{Tr}(A^3)$. The bound is therefore expected to be
+loose in graphs where a large fraction of edges act as bridges, and
+looser still when $d_{\min}$ is small; see
+Remark~\ref{rem:loose_bound}.
+\end{corollary}
+
+\textbf{Consequence for Tr$(A^3)$.}
+Since $\text{Tr}(A^3) = 6N_\triangle = \sum_{(x,y)\in E} 2\,t_{xy}$,
+the upper bound gives:
+\begin{equation}
+\sum_{(x,y) \in E} \kappa^+(x,y) \leq
+\frac{\text{Tr}(A^3)}{2\,d_{\min}}.
+\label{eq:tra3_upper}
+\end{equation}
+
+\textbf{Empirical validation.}
+Using exact $W_1$ computation via optimal transport (Wasserstein-1
+distance between neighbour distributions), we validate on six
+networks. Results in Table~\ref{tab:orc_bounds} show that all six
+satisfy the upper bound~\eqref{eq:tra3_upper}. The bound is, however,
+far from tight, and its slack does not order by clustering: the ratio
+$\Sigma\kappa^+/\text{UB}$ is $0.065$ for Karate Club, essentially the
+same as $0.047$ for the Erd\H{o}s-R\'{e}nyi graph and $0.069$ for the
+Barab\'{a}si-Albert graph, even though the first has a dense triangle
+structure and the other two do not. Remark~\ref{rem:loose_bound}
+identifies what does control the slack. The companion lower bound
+$\operatorname{Tr}(A^3)/(2d_{\max})$, which is natural to conjecture
+alongside~\eqref{eq:tra3_upper}, is not satisfied on the two sparse
+random graphs: it evaluates to $9.00$ against $\Sigma\kappa^+ = 1.90$
+for Erd\H{o}s-R\'{e}nyi and to $7.83$ against $3.25$ for
+Barab\'{a}si-Albert. This is the aggregate counterpart of the
+edge-wise failure reported in Remark~\ref{rem:lower_bound}, and it is
+why only the upper bound is claimed here.
+
+\begin{table}[ht]
+\centering
+\caption{ORC upper bound validation. $\Sigma\kappa^+$ is computed with exact
+Wasserstein-1 optimal transport; LB $= \text{Tr}(A^3)/(2d_{\max})$ is the
+lower bound one would naturally conjecture alongside it, and
+UB $= \text{Tr}(A^3)/(2d_{\min})$ is the bound of~\eqref{eq:tra3_upper}.
+All six networks satisfy the upper bound; the conjectured lower bound fails
+on the two sparse random graphs. Slack is governed by $d_{\min}$, not by
+clustering; see Remark~\ref{rem:loose_bound}. The values were computed with
+\texttt{colabs/fsri\_colab4b\_orc\_exact.py}, which is included in the
+accompanying repository.}
+\label{tab:orc_bounds}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+Network & $N$ & $M$ & $d_{\min}$ & $d_{\max}$ & LB & $\Sigma\kappa^+$ & UB \\
+\midrule
+Karate Club~\cite{zachary1977}         & 34 & 78  & 1  & 17 & 7.94   & 8.74   & 135.00  \\
+Florentine Families~\cite{padgett1993} & 15 & 20  & 1  & 6  & 1.50   & 1.50   & 9.00    \\
+Les Mis\'{e}rables                     & 77 & 254 & 1  & 36 & 38.92  & 82.40  & 1401.00 \\
+Davis Southern Women                   & 18 & 139 & 11 & 17 & 111.35 & 111.78 & 172.09  \\
+\midrule
+Erd\H{o}s-R\'{e}nyi ($n{=}40$)         & 40 & 110 & 2  & 9  & 9.00   & 1.90   & 40.50   \\
+Barab\'{a}si-Albert ($n{=}40$)         & 40 & 111 & 3  & 18 & 7.83   & 3.25   & 47.00   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{remark}[Why the Bound Is Loose]
+\label{rem:loose_bound}
+The slack in~\eqref{eq:tra3_upper} is governed by $d_{\min}$ rather
+than by clustering. A single pendant vertex sets $d_{\min} = 1$ and
+doubles the bound relative to an otherwise identical graph with
+$d_{\min} = 2$, however many triangles the graph contains. Three of
+the six networks in Table~\ref{tab:orc_bounds} have $d_{\min} = 1$
+(Karate Club, Florentine Families, Les Mis\'{e}rables), and for these
+the reported UB is exactly $\text{Tr}(A^3)/2$: $135.00 = 270/2$,
+$9.00 = 18/2$ and $1401.00 = 2802/2$, for $45$, $3$ and $467$
+triangles respectively. This is why Karate Club and Les
+Mis\'{e}rables, both triangle-rich, show slack indistinguishable from
+that of the sparse random graphs, while Davis Southern Women, the only
+network here with $d_{\min} = 11$, is the one case where the bound is
+nearly attained ($111.78$ against $172.09$). A second and independent
+effect acts in the sparse random graphs, where most edges have
+$\kappa < 0$ and act as bridges rather than closing triangles, so that
+$\Sigma\kappa^+$ is small in absolute terms as well. Neither effect is
+evidence against the bound, and neither is captured by the clustering
+coefficient.
+\end{remark}
+
+This gives $\mathcal{T}(W)$ a precise geometric meaning: it measures
+the \emph{total positive curvature} of the weight graph. Minimising
+$\mathcal{T}(W)$ flattens the curvature distribution, moving the
+network toward a configuration where curvature is uniformly
+distributed, the network analogue of a maximally symmetric
+Riemannian manifold.
+
+\begin{remark}[Continuum limits and other curvature observables: what is
+not claimed here]
+\label{rem:continuum}
+Two results in the literature extend the discrete construction toward
+continuous geometry, and we record them as context rather than as
+contributions of our own. The Ollivier-Ricci curvature of random geometric
+graphs embedded in a Riemannian manifold converges in the continuum limit to
+the Ricci curvature of that manifold, and the result extends to Lorentzian
+signature~\cite{vanderhoorn2021}; building on it, the construction has been
+defined for causal sets using Lorentzian optimal
+transport~\cite{orc_causalsets2026}. Where a network encodes causal relations
+in that sense~\cite{bombelli1987}, its curvature approximates a Ricci scalar,
+and one may read the two ends of $\Omega$ as regions where geodesics focus
+and defocus. We derive nothing in that direction, and a reader who discounts
+this remark entirely loses nothing that the rest of the paper relies on.
+Separately, nonperturbative quantum gravity has its own curvature observable
+for discrete geometries~\cite{klitgaard2018a,klitgaard2018b,klitgaard2020},
+which is a different construction: it compares distances between spheres
+rather than transporting neighbour measures, and admits no triangle-counting
+identity, so the bound above does not transfer to it. Whether $\mathcal{T}$
+has an analogue for quantum channels under non-commutative transport
+metrics~\cite{gao2021} is open.
+\end{remark}
+\section{Application: Omega-S Neural Network Regulariser}
+\label{sec:omega_s}
+% ============================================================
+
+\subsection{From Network Theory to Neural Networks}
+
+The FSRI framework has an immediate application to neural network
+regularisation. For a weight matrix $W^{(\ell)} \in \mathbb{R}^{m \times n}$
+in layer $\ell$ of a neural network, we define the layer-wise
+topological pressure:
+\begin{equation}
+\mathcal{T}_\ell = \frac{\lambda_\Omega}{|\operatorname{numel}(W^{(\ell)})|}
+\cdot \widehat{\operatorname{Tr}}(W^{(\ell)}W^{(\ell)\top})^3,
+\label{eq:omega_layer}
+\end{equation}
+and the total regularisation penalty:
+\begin{equation}
+\mathcal{L}_\mathcal{T} = \sum_\ell \mathcal{T}_\ell.
+\label{eq:total_penalty}
+\end{equation}
+
+The Omega-S regulariser adds $\mathcal{L}_\mathcal{T}$ to the task loss every
+$K$ training steps. By Proposition~\ref{prop:gradient_flow}, this drives the network's weight
+matrices toward minimum-entropy-production configurations, that is, states
+where structural monopolies are suppressed.
+
+One point should be stated plainly, because the shared name invites the
+opposite reading. \emph{The regulariser minimises $\mathcal{T}(W)$ and never
+computes $\Omega$.} No clustering coefficient, connection density,
+modularity or degree variance enters the training loop: the penalty is the
+Hutchinson estimate of $\operatorname{Tr}(WW^\top)^3$ and nothing else. The
+index and the penalty are related by interpretation, through
+Definition~\ref{def:tep} and Proposition~\ref{prop:gradient_flow}, and not
+by computation. This is why the tension identified in Remark~\ref{rem:direction}
+does not arise in the applied setting: what is minimised is the topological
+pressure, whose thermodynamic reading is unambiguous, rather than the
+composite index, whose response to that minimisation depends on how
+$\mathrm{Coex}$ moves alongside it and is therefore a measured outcome.
+
+\subsection{Empirical Validation}
+
+The Omega-S regulariser~\cite{acedo2026omegas} validates the theoretical
+predictions:
+
+\begin{table}[ht]
+\centering
+\caption{Omega-S empirical results, with the setting for each row. All
+values are as reported in the applied paper~\cite{acedo2026omegas}.
+Retention is measured on Llama-3-8B (LoRA, code $\to$ prose) as
+HumanEval pass@1 post-prose / post-code; the degree-variance row is measured
+on the three-layer MLP with Split-MNIST and the structured-sparsity row on
+GPT-2, not on Llama-3-8B.}
+\label{tab:omega_results}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc}
+\toprule
+Result & Value & Interpretation \\
+\midrule
+Code capability kept & $0.173 \to 0.238$, 9/10 &
+  Primary metric, vs no regulariser; \\
+ & & sign test $p=0.011$ \\
+Same, as retention ratio & $62.9\% \to 84.1\%$ &
+  The same comparison, in ratio form \\
+Retention vs weight decay & $61.9\% \to 84.1\%$, 10/10 &
+  Secondary, $p=0.002$; thin selection \\
+Retention vs EWC & $69.1\% \to 84.1\%$, 8/10 &
+  Secondary, $p=0.014$; thin selection \\
+vs row-norm control (own sweep) & 8/10, $p=0.055$ &
+  Not reducible to norm balancing \\
+Degree variance reduction (MLP) & $41.94 \to 0.136$ &
+  $8\times$ the reduction obtained by \\
+ & & weight decay ($1.12$) \\
+Structured sparsity (GPT-2) & $-0.72\%$ vs $-0.77\%$ &
+  No gain over group lasso alone; the \\
+ & & compression is group lasso's \\
+Training overhead & $<4\%$ per step &
+  Analytic, penalty every 10 steps \\
+Latency overhead (2-GPU FSDP) & $+1.5\%$ &
+  Measured; zero inter-GPU cost \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The retention result is particularly significant from the thermodynamic
+perspective: minimum-entropy-production states (low $\mathcal{T}$) are
+more stable under perturbation (new training data), consistent with
+Prigogine's characterisation of stationary non-equilibrium states as
+maximally robust against small deviations.
+
+% ============================================================
+\section{Applications Beyond Neural Networks}
+\label{sec:applications}
+% ============================================================
+
+The FSRI framework is domain-agnostic, and the readings below are offered
+as interpretations of the same functional in other settings rather than as
+results. None of them is measured here.
+
+\textbf{Ecological networks.} A network dominated by a single node
+($\mathrm{Coex} \to \infty$, $C \to 0$) collapses $\Omega \to 0$, which the
+framework reads as systemic fragility; the Florentine Medici marriage and
+credit network~\cite{padgett1993} is the standard illustration of that
+topology. Soil microbial networks under resource abundance exhibit the same
+monopoly structure~\cite{ortiz2021}, and land-use intensification is reported
+to reduce network complexity and the abundance of keystone
+taxa~\cite{banerjee2019}. The one experimental test of the direction this
+reading assumes manipulates soil biodiversity in grassland microcosms and
+finds that network complexity predicts ecosystem multifunctionality, with the
+relation surviving a correction for richness~\cite{wagg2019}; that result is
+about complexity and function rather than about $\Omega$, and we cite it as
+the motivation for the numerator of~\eqref{eq:fsri} and not as a validation of
+the composite.
+
+\textbf{Financial systems.} The Minsky Moment~\cite{minsky1986}, the
+sudden collapse of a leveraged financial system, is a structural
+phase transition from high-$\Omega$ (distributed, mutualistic) to
+low-$\Omega$ (monopolistic, fragile) topology under energy abundance
+($E_\text{ext}$ = credit availability).
+
+\textbf{Power grids.} Cascade failure in a linear (high-$M$, low-$C$) grid
+reads in the same terms, as a topological phase transition triggered by a
+central shock.
+
+\textbf{Medical systems.} Microbiome dysbiosis is sometimes described in the
+same terms, with energy abundance driving specialisation ($M$ increases, $C$
+decreases, $\mathrm{Coex}$ increases, $\Omega$ collapses). We flag this
+reading as the least supported of those listed here, and as an illustration
+rather than an expectation. Evidence from the human gut does not line up with
+it uniformly: co-occurrence networks in inflammatory bowel disease are
+reported to be reorganised rather than simply degraded, and the healthy
+network is the one more easily disrupted by removal of a few key
+taxa~\cite{baldassano2016}. The orientation of $M$ in this setting is subject
+to Remark~\ref{rem:modularity_scope}. The reading is also subject
+to the sampling condition of Section~\ref{sec:limitations}: the node set of
+a co-occurrence network of taxa grows with sequencing depth, so readings
+taken at unequal depth are not comparable without an explicit
+standardisation, and the factor most affected, $\mathrm{Coex}$, is the one
+this reading relies on.
+
+\textbf{Multi-agent language-model systems.} A recent analysis of communication
+graphs among language-model agents derives a two-sided constraint on
+connectivity of exactly the shape this framework describes, and reaches it from
+epidemiology rather than from triadic structure~\cite{niu2026}. A clean-task
+reliability target imposes a minimum degree, because a node needs enough
+independent opinions for a majority vote to reach the required accuracy; an
+error-propagation target imposes a maximum, because at fixed exposure per edge
+the invasion factor grows with the spectral radius of the adjacency matrix.
+The feasible regular degrees are then confined to an interval, and the authors
+characterise when that interval is empty. The construction differs from ours in
+every detail, and we record the structural agreement rather than any numerical
+one; its relation to Definition~\ref{def:fsri} is the subject of
+Remark~\ref{rem:window}.
+
+% ============================================================
+\section{Limitations and Future Work}
+\label{sec:limitations}
+% ============================================================
+
+We set out the scope of each result, distinguishing what is established
+from what remains conjectural.
+
+\textbf{Scope of the ORC-triangle connection.} Proposition~\ref{prop:orc_triangles} is proved
+using Jost-Liu~\cite{jost2014} for regular and semi-regular graphs. The
+approximation $\kappa^+(x,y) \propto |N(x) \cap N(y)|/\bar{d}$ fails for
+highly heterogeneous degree distributions; a fully general proof requires
+the exact Wasserstein-1 computation and is left for future work.
+
+\textbf{Scope of the FSRI proportionality.} Proposition~\ref{prop:ws_exact} derives the
+exact FSRI formula for Watts-Strogatz networks,
+$\Omega = [(3K-6)/(4K-2)] \cdot (1-p)^2/(np)$, which shows that the
+proportionality $\Omega \propto (S_\text{env}/E_\text{ext})^2$ does not hold
+in general. Substituting $\mathrm{Var}(k) = Kp(1-p)$ and $E_\text{ext} = K$
+into~\eqref{eq:omega_ws} gives $(S_\text{env}/E_\text{ext})^2 = p(1-p)/K$ and
+hence the exact identity
+\[
+\Omega \;=\; \frac{1}{nK}\cdot\frac{3K-6}{4K-2}\cdot
+\frac{(1-p)^3}{(S_\text{env}/E_\text{ext})^{2}},
+\]
+in which the ratio appears in the \emph{denominator}. The relation is inverse
+rather than proportional, which is what produces the negative correlations
+$r = -0.407$ to $-0.573$ reported above rather than merely weak positive ones.
+Deriving the corresponding expression for other network models
+(Barabási-Albert, Erdős-Rényi) remains open.
+
+\textbf{Sampled graphs and the growing node set.}
+Remark~\ref{rem:comparability} states the condition under which two values
+of $\Omega$ may be compared: matched order and matched density. A stronger
+condition applies when $A$ is not given but estimated from a finite sample
+whose node set grows with the sampling effort. Co-occurrence networks of
+microbial taxa at different sequencing depths, and lexical or syntactic
+networks at different corpus sizes, are of this kind: additional sampling
+adds vertices rather than only refining the weights among those already
+present. In ecological terms this is the sampling regime of a metacommunity
+with a non-zero speciation rate~\cite{hubbell2001}, in which the local
+sample is drawn from a regional pool that is itself still being added to,
+so that richness does not saturate and neither does any factor computed
+from it. Matching the sample size is then not sufficient, because two units
+of equal sample size sit at different points of their respective
+accumulation curves.
+
+We measured the effect on syntactic dependency networks built from
+Universal Dependencies treebanks for 28 languages, at token budgets from
+$2\,000$ to $32\,000$, fitting $\log_{10}(\cdot) = a + b \log_{10} N$ per
+language. The accumulation exponents are $\beta_V = 0.77 \pm 0.06$ for the
+vertex set and $\beta_E = 0.955 \pm 0.017$ for the edge set. The former is
+the sublinear vocabulary growth of Herdan and Heaps~\cite{heaps1978},
+measured here at the small end of the corpus range where that exponent is
+known to exceed the $0.4$ to $0.6$ typical of large corpora. The latter
+says that distinct dependency pairs accumulate almost linearly with the
+sample: the edge set is nowhere near saturation in this range, and the
+tightness of $\beta_E$ across typologically distant families is worth noting
+in itself.
+
+All four factors drift, and the difference between them is one of degree
+rather than of kind: $b = +1.03$ for $\mathrm{Coex}$ and $-0.59$ for $D$,
+against $-0.14$ for $C$ and $-0.09$ for $M$. For the index itself
+$b = -1.68$, so a tenfold increase in corpus size divides $\Omega$ by
+roughly fifty. Two of these slopes carry different weight, and we separate
+them rather than report them alike. That of $D$ follows algebraically from
+$\beta_V$ and $\beta_E$, since $D$ is a fixed function of $n$ and $m$, and is
+therefore a consistency check on the fits and not independent evidence.
+That of $\mathrm{Coex}$ does not, since it depends on the shape of the
+degree distribution and not only on the two accumulation rates, and it is
+the slope that carries information. The drift is not an artefact of the
+small end of the range: the slope of $\mathrm{Coex}$ changes by $-0.02$
+between the lower and upper halves of the budgets tested. Neither does it
+extrapolate, since $\beta_V$ is itself known to fall as corpora
+grow~\cite{gerlach2013}.
+
+Two routes are available in the literature. The first is to standardise by
+sample \emph{coverage} rather than by sample size, following Chao and
+Jost~\cite{chao2012coverage}, who show that equal-sized samples
+systematically bias comparisons because a size sufficient to characterise a
+poorer community is insufficient for a richer one, and that coverage is
+estimable from the singleton count. The second is to replace the
+concentration factor by a parameter of the generating process rather than a
+statistic of the realised sample, for instance the fitted tail exponent
+$\gamma$ of the degree distribution~\cite{clauset2009}. On these corpora
+that exponent is estimable and lies below three throughout
+($\gamma = 2.67 \pm 0.22$ over 582 samples, range $1.92$ to $2.99$), which
+makes the divergence condition of Remark~\ref{rem:comparability} concrete
+rather than hypothetical. It does not account for the observed rate: the
+standard scaling for a tail exponent of that size predicts a drift about an
+order of magnitude smaller than the one measured. It also changes what the
+factor means, breaking the reading of $\mathrm{Coex}$ as a degree variance
+on which the competitive-exclusion analogy of Remark~1 rests.
+
+The same two factors identified analytically in
+Proposition~\ref{prop:shape_invariant} are the ones that carry the drift
+here, and the shape-normalised index of Definition~\ref{def:shape} largely
+removes it. The Gini coefficient of the degree sequence drifts at
+$b = +0.09$ and the normalised entropy of that sequence at $b = -0.02$,
+against $+1.03$ for $\mathrm{Var}(\mathbf{k})$. Substituting the
+concentration factor alone leaves the index at $b = -0.73$, because $D$
+still drifts at $-0.59$ and, as noted above, the slope of $D$ is
+$\beta_E - 2\beta_V$, a property of the sampling regime rather than of the
+statistic chosen. Replacing $D$ by the mean degree as well, whose slope is
+$\beta_E - \beta_V = 0.19$, gives $b = +0.04$ for $\widetilde{\Omega}$, a
+factor of roughly $1.1$ per decade of corpus size against the factor of
+$47$ carried by $\Omega$ as defined. Restoring comparability therefore
+requires changing two factors rather than one, and the pair that works
+empirically is the pair the proposition identifies.
+
+We none the less keep $\Omega$ as the index of Definition~\ref{def:fsri}
+and $\widetilde{\Omega}$ as a variant for sampled graphs, for the reason
+given in Remark~\ref{rem:shape_scope}: the proposition covers graphs with
+homogeneous degrees, the measurement covers estimated graphs with
+heavy-tailed ones, and the second does not follow from the first. What can
+be said is that the variant is not an ad hoc repair. It has the same
+analytical status on the Watts-Strogatz family as the index it modifies,
+and it is the substitution that the scale argument predicts in advance.
+
+Two elements of the treatment above have published precedents that are worth
+naming, because both are sometimes taken to be idiosyncratic. The first is the
+construction: inferring a single association network over all units and then
+reading, for each unit, the subnetwork induced by the taxa it contains is the
+procedure used to relate microbiome complexity to ecosystem multifunctionality
+in grassland microcosms~\cite{wagg2019}, and a per-sample connectivity
+statistic computed from a global matrix of pairwise associations is the basis
+of the cohesion metric of~\cite{herren2017}. The second is the correction:
+the same work observes that network complexity depends on the number of nodes,
+detrends for richness before interpreting, and reports that the residual
+relation to function survives that detrending~\cite{wagg2019}. The condition
+stated here is therefore not a new objection to an established practice but
+the quantitative form of a correction that practice already applies.
+
+A limitation applies to the measurement itself. Universal Dependencies
+provides several treebanks of differing genre for some languages, and the
+dispersion of these quantities between treebanks of one language is not
+small relative to the dispersion between languages. Measured on sixteen
+treebanks across five languages at a matched budget, the ratio of the
+second to the first is $3.6$ for the Gini coefficient, $3.2$ for the
+normalised entropy and $2.15$ for $\mathrm{Var}(\mathbf{k})$. Comparison of
+network quantities estimated from treebanks is therefore genre-contaminated
+across languages as well as sampling-dependent within them, and the margins
+above should be read accordingly.
+
+\textbf{Status of the ORC numerical validation.} The Colab~3 experiment
+confirms numerically that ORC $\kappa(x,y)$ correlates strongly with edge
+contribution to $\operatorname{Tr}(A^3)$ in Watts-Strogatz networks,
+supporting Proposition~\ref{prop:orc_triangles} empirically. The evidence
+is numerical rather than analytical, and restricted to that family.
+
+\textbf{Scope of the spectral identity.}
+Proposition~\ref{prop:spectral_identity} constrains what can be claimed for
+the global index: as a scalar detector, $\mathcal{T}$ should be benchmarked
+against, and is expected to tie, other spectral functionals. Claims of
+superiority over spectral methods are defensible only for the node-wise
+field (Corollary~\ref{cor:locus}) or for the training-time gradient flow,
+not for the global statistic. The signed extension is stated but not yet
+validated empirically; whether signed $\mathcal{T}$ improves detection in
+domains where sign is meaningful is an open question.
+
+The geometric reading is limited to what Section~\ref{sec:orc_graphs}
+establishes, namely the inequality relating common-neighbour counts to
+$\operatorname{Tr}(A^3)$ and its measured slack. Continuum limits, causal
+sets and the curvature observables of nonperturbative quantum gravity are
+noted in Remark~\ref{rem:continuum} as context; we derive no result in that
+direction and none of our claims depends on one.
+
+% ============================================================
+\section{Conclusion}
+% ============================================================
+
+We have presented a mathematical framework connecting the Functional
+Symbiotic Resilience Index $\Omega$ to non-equilibrium thermodynamics
+via the topological pressure functional $\mathcal{T}(W) =
+\operatorname{Tr}(WW^\top)^3$.
+
+The key results are:
+\begin{enumerate}
+\item $\mathcal{T}(W)$ is proportional to the global clustering
+coefficient of the induced weight graph, providing a precise
+topological interpretation.
+\item The gradient $3(WW^\top)^2$ is the \emph{topological pressure}
+on each weight, whose Gini coefficient discriminates monopoly networks
+($G = 0.986$) from uniform networks ($G = 0.272$) by 3.6×.
+\item The gradient flow $\dot{W} = -\lambda \nabla_W \mathcal{T}(W)$
+implements Prigogine's minimum-entropy-production principle in the
+space of weight configurations.
+\item Phase transitions in triangle density (fugacity mechanism)
+confirm the thermodynamic analogy: Tr$(A^3)$ increases 76× over the
+transition, while the Ollivier-Ricci curvature interpretation provides
+a geometric framework consistent with the relational motivation of the
+index.
+\item The index is not invariant to the order of the graph, and the
+dependence is carried by exactly two of its four factors. Replacing them
+by their shape-normalised counterparts, the mean degree and the Gini
+coefficient of the degree sequence, removes the dependence exactly on
+Watts-Strogatz graphs (Proposition~\ref{prop:shape_invariant}) and reduces
+it from a factor of $47$ to a factor of $1.1$ per decade of sampling effort
+on estimated graphs (Section~\ref{sec:limitations}).
+\end{enumerate}
+
+Since several of the results above are restrictive, we state in one place
+what the framework claims after them. Three things survive. The node-wise
+field $\operatorname{diag}(A^3)$ is not a function of the spectrum
+(Proposition~\ref{prop:node_nonspectral}) and is therefore the component
+that no eigenvalue-based scalar can reproduce. The training-time gradient
+flow of Proposition~\ref{prop:gradient_flow} is a construction rather than a
+statistic, and its empirical outcome is reported in
+Section~\ref{sec:omega_s}. And the global scalar $\Omega$ remains a usable
+descriptive index within the conditions of use set out in
+Remark~\ref{rem:comparability} and Section~\ref{sec:limitations}, namely at
+matched graph order and density and, for graphs estimated from samples,
+under an explicit standardisation, or in the shape-normalised form of
+Definition~\ref{def:shape} where those conditions cannot be met. What we do
+not claim is that the global
+scalar dominates other spectral functionals as a detector; Proposition~\ref{prop:spectral_identity}
+forbids it, and we say so rather than leave it to be found.
+
+The Omega-S neural network regulariser is a concrete instantiation of the
+framework rather than a proof of it. Minimising $\mathcal{T}(W)$ during
+training yields networks that are more stable under sequential learning
+(mean retention $61.9\%\to84.1\%$ over tuned weight decay across ten seeds, ten
+of ten positive) and, in combination with group lasso, structurally prunable,
+although the compression obtained in that setting is attributable to the
+group-lasso term and the marginal contribution of the penalty remains to be
+isolated. These are empirical outcomes consistent with the
+minimum-entropy-production reading developed above; they do not establish
+that reading, which would require measuring entropy production directly
+rather than inferring it from the structural proxy. We record the
+distinction because the thermodynamic interpretation is the more
+speculative part of this work, and the empirical results stand
+independently of whether it is ultimately upheld.
+
+% ============================================================
+\bibliographystyle{unsrt}
+% ============================================================
+\section*{Declaration of LLM Usage}
+% ============================================================
+
+Large language models were used as writing and coding assistants during the
+preparation of this manuscript: to improve language clarity and
+presentation, to assist with coding and debugging for the numerical
+verifications, and to help identify related work. All technical ideas,
+theoretical results, proofs, experimental design and final interpretations
+were developed, verified and approved by the author.
+
+\begin{thebibliography}{99}
+
+\bibitem{acedo2026omegas}
+Acedo A. (2026).
+Omega-S: A Functional Resilience Index for LLM Fine-Tuning. Less Forgetting
+Without Past Data, and More Reliable Structured Pruning.
+\textit{arXiv}:2608.03887. \url{https://arxiv.org/abs/2608.03887}
+
+\bibitem{acedo2022indices}
+Acedo A, Ortega-Arranz H, Almonacid D, Ferrero A (2022).
+Methods and systems for generating and applying agronomic indices from
+microbiome-derived parameters.
+US Patent Application Publication No.\ US~2022/0268756~A1
+(Appl.\ No.\ 17/665,332, filed 4 February 2022), Biome Makers Inc.
+
+\bibitem{biome_patent}
+Ortiz-Alvarez R, Ferrero A, Imam N, Acedo A, Belda-Aguilar I, Almonacid D
+(2021).
+Methods and systems for evaluating ecological disturbance of an agricultural
+microbiome based upon network properties of organism communities.
+WIPO Publication No.\ WO~2021/119528~A1 (PCT/US2020/064668), Biome Makers Inc.
+
+\bibitem{prigogine1967}
+Prigogine I. (1967).
+\textit{Introduction to Thermodynamics of Irreversible Processes}.
+Wiley-Interscience.
+
+\bibitem{watts1998}
+Watts D J, Strogatz S H. (1998).
+Collective dynamics of `small-world' networks.
+\textit{Nature}, 393, 440--442.
+
+\bibitem{barabasi1999}
+Barabási A-L, Albert R. (1999).
+Emergence of scaling in random networks.
+\textit{Science}, 286(5439), 509--512.
+
+\bibitem{hutchinson1990}
+Hutchinson M F. (1990).
+A stochastic estimator of the trace of the influence matrix for
+Laplacian smoothing splines.
+\textit{Communications in Statistics --- Simulation and Computation},
+19(2), 433--450.
+
+\bibitem{ollivier2009}
+Ollivier Y. (2009).
+Ricci curvature of Markov chains on metric spaces.
+\textit{Journal of Functional Analysis}, 256(3), 810--864.
+
+\bibitem{motif2026}
+Anonymous. (2026).
+Motif enrichment as a driver of scale-free behavior in rewired random
+regular graphs.
+\textit{arXiv:2604.23152}.
+
+\bibitem{martins2023}
+Martins G F, et al. (2023).
+Topologically-constrained fluctuations and thermodynamics regulate
+nonequilibrium response.
+\textit{arXiv:2305.19348}.
+
+\bibitem{toporesilience2017}
+Asllani M, et al. (2017).
+Topological resilience in non-normal networked systems.
+\textit{arXiv:1706.02703}.
+
+\bibitem{strauss1986}
+Strauss D. (1986).
+On a general class of models for interaction.
+\textit{SIAM Review}, 28(4), 513--527.
+
+\bibitem{lu2024alpha}
+Lu Y, et al. (2024).
+AlphaPruning: Using Heavy-Tailed Self Regularization Theory for
+Improved Layer-wise Pruning of Large Language Models.
+\textit{arXiv:2410.10912}.
+
+\bibitem{ortiz2021}
+Ortiz-Álvarez R, et al. (2021).
+Consistent Changes in the Soil Bacterial Communities of Agricultural
+Ecosystems.
+\textit{mSystems}, 6(1).
+
+\bibitem{minsky1986}
+Minsky H. (1986).
+\textit{Stabilizing an Unstable Economy}.
+Yale University Press.
+
+\bibitem{zachary1977}
+Zachary W W. (1977).
+An information flow model for conflict and fission in small groups.
+\textit{Journal of Anthropological Research}, 33(4), 452--473.
+
+\bibitem{padgett1993}
+Padgett J F, Ansell C K. (1993).
+Robust Action and the Rise of the Medici, 1400--1434.
+\textit{American Journal of Sociology}, 98(6), 1259--1319.
+
+\bibitem{lly2026nonreg}
+Jung J, Kwon Y S, Lee S, Park J. (2026).
+A combinatorial approach to $\alpha$-Ricci and Lin-Lu-Yau Ricci
+curvatures on graphs.
+\textit{arXiv:2606.24261v1} [math.DG], 23 June 2026.
+Global Basic Research Laboratory, DGIST, Republic of Korea.
+
+\bibitem{lin2011}
+Lin Y, Lu L, Yau S-T. (2011).
+Ricci curvature of graphs.
+\textit{Tohoku Mathematical Journal}, 63(4), 605--627.
+
+\bibitem{barrat2000}
+Barrat A, Weigt M. (2000).
+On the properties of small-world network models.
+\textit{European Physical Journal B}, 13(3), 547--560.
+
+\bibitem{sandhu2016}
+Sandhu R S, Georgiou T T, Tannenbaum A R. (2016).
+Ricci curvature: an economic indicator for market fragility and systemic risk.
+\textit{Science Advances}, 2(5), e1501495.
+
+\bibitem{expost2024}
+Anonymous. (2024).
+On the Ollivier-Ricci curvature as fragility indicator of the stock markets.
+arXiv:2405.07134.
+
+\bibitem{bauer2012}
+Bauer F, Jost J, Liu S. (2012).
+Ollivier-Ricci curvature and the spectrum of the normalized graph Laplace
+operator.
+\textit{Mathematical Research Letters}, 19(6), 1185--1205.
+
+\bibitem{jost2014}
+Jost J, Liu S. (2014).
+Ollivier's Ricci curvature, local clustering and curvature-dimension
+inequalities on graphs.
+\textit{Discrete \& Computational Geometry}, 51(2), 300--322.
+
+\bibitem{schnakenberg_nets}
+Maes C, Netočný K. (2007).
+Minimum entropy production principle from a dynamical fluctuation law.
+\textit{Journal of Mathematical Physics}, 48, 053306.
+
+\bibitem{prigogine_critical}
+Bertola M, Grunbaum F A. (2007).
+A critical analysis of the minimum entropy production theorem and its
+application to heat and fluid flow.
+\textit{International Journal of Heat and Mass Transfer}, 51(5--6), 1907--1912.
+
+\bibitem{maxcaliber2018}
+Ghosh K, Dixit P D, Agozzino L, Dill K A. (2018).
+Maximum caliber: a general variational principle for dynamical systems.
+\textit{arXiv:1505.05479}.
+
+\bibitem{samal2021}
+Samal A, Pharasi H K, Ramaia S J, Kannan H, Saucan E, Jost J, Chakraborti A.
+(2021).
+Network geometry and market instability.
+\textit{Royal Society Open Science}, 8, 201734.
+
+\bibitem{sia2019}
+Sia J, Jonckheere E, Bogdan P. (2019).
+Ollivier-Ricci curvature-based method to community detection in complex networks.
+\textit{Scientific Reports}, 9, 9800.
+
+\bibitem{vanderhoorn2021}
+van der Hoorn P, Cunningham W J, Meskhidze H, Krioukov D. (2021).
+Ollivier-Ricci curvature convergence in random geometric graphs.
+\textit{Physical Review Research}, 3, 013211.
+
+\bibitem{orc_causalsets2026}
+Anonymous. (2026).
+Ollivier-Ricci Curvature for Causal Sets.
+\textit{arXiv:2606.04910}.
+
+\bibitem{bombelli1987}
+Bombelli L, Lee J, Meyer D, Sorkin R D. (1987).
+Space-time as a causal set.
+\textit{Physical Review Letters}, 59(5), 521--524.
+
+\bibitem{cartwright1956}
+Cartwright D, Harary F (1956).
+Structural balance: a generalization of Heider's theory.
+\emph{Psychological Review} 63(5):277--293.
+
+\bibitem{klein1954}
+Klein M J. (1954).
+Principle of minimum entropy production.
+\textit{Physical Review}, 96, 250--255.
+
+\bibitem{klitgaard2018a}
+Klitgaard N, Loll R. (2018).
+Introducing quantum Ricci curvature.
+\textit{Physical Review D}, 97(4), 046008. \textit{arXiv:1712.08847}.
+
+\bibitem{klitgaard2018b}
+Klitgaard N, Loll R. (2018).
+Implementing quantum Ricci curvature.
+\textit{Physical Review D}, 97(10), 106017. \textit{arXiv:1802.10524}.
+
+\bibitem{klitgaard2020}
+Klitgaard N, Loll R. (2020).
+How round is the quantum de Sitter universe?
+\textit{European Physical Journal C}, 80, 990. \textit{arXiv:2006.06263}.
+
+\bibitem{fortunato2007}
+Fortunato S, Barthélemy M. (2007).
+Resolution limit in community detection.
+\textit{Proceedings of the National Academy of Sciences}, 104(1), 36--41.
+
+\bibitem{chao2012coverage}
+Chao A, Jost L. (2012).
+Coverage-based rarefaction and extrapolation: standardizing samples by
+completeness rather than size.
+\textit{Ecology}, 93(12), 2533--2547.
+
+\bibitem{clauset2009}
+Clauset A, Shalizi C R, Newman M E J. (2009).
+Power-law distributions in empirical data.
+\textit{SIAM Review}, 51(4), 661--703.
+
+\bibitem{heaps1978}
+Heaps H S. (1978).
+\textit{Information Retrieval: Computational and Theoretical Aspects}.
+Academic Press. See also Herdan G. (1964), \textit{Quantitative Linguistics},
+Butterworths.
+
+\bibitem{gerlach2013}
+Gerlach M, Altmann E G. (2013).
+Stochastic model for the vocabulary growth in natural languages.
+\textit{Physical Review X}, 3, 021006.
+
+\bibitem{hubbell2001}
+Hubbell S P. (2001).
+\textit{The Unified Neutral Theory of Biodiversity and Biogeography}.
+Princeton University Press.
+
+\bibitem{saati2026}
+Saati-Santamar\'{i}a Z, et al. (2026).
+Soil Microbial Diversity and Network Organization Respond to Land Use and
+Agricultural Inputs Worldwide. \textit{Global Change Biology}, 32, e70984.
+
+\bibitem{wagg2019}
+Wagg C, Schlaeppi K, Banerjee S, Kuramae E E, van der Heijden M G A. (2019).
+Fungal-bacterial diversity and microbiome complexity predict ecosystem
+functioning. \textit{Nature Communications}, 10, 4841.
+
+\bibitem{herren2017}
+Herren C M, McMahon K D. (2017).
+Cohesion: a method for quantifying the connectivity of microbial communities.
+\textit{The ISME Journal}, 11(11), 2426--2438.
+
+\bibitem{yan2017}
+Yan G, Martinez N D, Liu Y-Y. (2017).
+Degree heterogeneity and stability of ecological networks.
+\textit{Journal of the Royal Society Interface}, 14(131), 20170189.
+
+\bibitem{yuan2021}
+Yuan M M, Guo X, Wu L, et al. (2021).
+Climate warming enhances microbial network complexity and stability.
+\textit{Nature Climate Change}, 11, 343--348.
+
+\bibitem{thebault2010}
+Th\'{e}bault E, Fontaine C. (2010).
+Stability of ecological communities and the architecture of mutualistic and
+trophic networks. \textit{Science}, 329(5993), 853--856.
+
+\bibitem{baldassano2016}
+Baldassano S N, Bassett D S. (2016).
+Topological distortion and reorganized modular structure of gut microbial
+co-occurrence networks in inflammatory bowel disease.
+\textit{Scientific Reports}, 6, 26087.
+
+\bibitem{may1972}
+May R M. (1972).
+Will a large complex system be stable? \textit{Nature}, 238, 413--414.
+
+\bibitem{allesina2012}
+Allesina S, Tang S. (2012).
+Stability criteria for complex ecosystems. \textit{Nature}, 483, 205--208.
+
+\bibitem{morrien2017}
+Morri\"{e}n E, et al. (2017).
+Soil networks become more connected and take up more carbon as nature
+restoration progresses. \textit{Nature Communications}, 8, 14349.
+
+\bibitem{banerjee2019}
+Banerjee S, et al. (2019).
+Agricultural intensification reduces microbial network complexity and the
+abundance of keystone taxa in roots. \textit{The ISME Journal}, 13, 1722--1736.
+
+\bibitem{niu2026}
+Niu R, Shu X, Zhao Y. (2026).
+Reliability-Contagion Feasibility in LLM Multi-Agent Networks.
+arXiv:2607.21912 [cs.MA].
+
+\bibitem{ulanowicz2009}
+Ulanowicz R E, Goerner S J, Lietaer B, Gomez R. (2009).
+Quantifying sustainability: resilience, efficiency and the return of
+information theory. \textit{Ecological Complexity}, 6(1), 27--36.
+
+\bibitem{leskovec2005}
+Leskovec J, Kleinberg J, Faloutsos C. (2005).
+Graphs over time: densification laws, shrinking diameters and possible
+explanations. \textit{Proceedings of the 11th ACM SIGKDD International
+Conference on Knowledge Discovery and Data Mining}, 177--187.
+
+\bibitem{gao2021}
+Gao L, Rouz\'{e} C. (2021).
+Ricci curvature of quantum channels on non-commutative transportation
+metric spaces. \textit{arXiv:2108.10609}.
+
+\end{thebibliography}
+
+\appendix
+% ============================================================
+\section{The Two-Sided Reading Made Exact: Ascendency on an Unweighted Graph}
+\label{app:ascendency}
+% ============================================================
+
+Remark~\ref{rem:window} records that Definition~\ref{def:fsri} is monotone in
+each of its factors and therefore expresses one edge of a two-sided constraint
+rather than the constraint itself, and names Ulanowicz's window of
+vitality~\cite{ulanowicz2009} as the ecological antecedent. That framework is
+stated for weighted flow networks and its transplant to the setting of this
+paper is not obvious, so we carry it out here. The result is short, exact, and
+it settles what such a transplant can and cannot deliver.
+
+\subsection{Setup}
+
+Let $A$ be the adjacency matrix of an undirected unweighted graph with $m$
+edges and degree sequence $\mathbf{k} = A\mathbf{1}$. Ulanowicz's decomposition
+takes a matrix of flows; on an unweighted graph the only choice that introduces
+no free parameter is the uniform one,
+\begin{equation}
+p_{ij} \;=\; \frac{A_{ij}}{2m},
+\qquad p_{i\cdot} \;=\; p_{\cdot i} \;=\; \frac{k_i}{2m}.
+\label{eq:uniform_flow}
+\end{equation}
+The capacity is $H = -\sum_{ij} p_{ij}\log p_{ij}$, the ascendency density is
+the average mutual information $\mathcal{A} = \sum_{ij} p_{ij}\log\!\big(p_{ij}
+/ (p_{i\cdot}p_{\cdot j})\big)$, the overhead is $\Phi = H - \mathcal{A}$, and
+the degree of order is $\alpha = \mathcal{A}/H$.
+
+\subsection{Three exact statements}
+
+\begin{lemma}[Capacity is fixed by the edge count]
+\label{lem:capacity}
+Under \eqref{eq:uniform_flow}, $H = \log(2m)$ for every graph.
+\end{lemma}
+
+\begin{proof}
+There are exactly $2m$ non-zero entries of $p$, each equal to $1/2m$, so
+\[
+H = -2m \cdot \tfrac{1}{2m}\log\tfrac{1}{2m} = \log(2m). \qedhere
+\]
+\end{proof}
+
+\begin{proposition}[Ascendency is mean surprisal against the configuration
+null]
+\label{prop:ascendency_null}
+Let $P^0_{ij} = k_i k_j / 2m$ be the expected number of edges between $i$ and
+$j$ under the configuration model. Then under \eqref{eq:uniform_flow}
+\begin{equation}
+\mathcal{A} \;=\; \frac{1}{2m}\sum_{(i,j):\,A_{ij}=1}
+\log\frac{2m}{k_i k_j}
+\;=\; \big\langle -\log P^0_{ij} \big\rangle_{A_{ij}=1},
+\label{eq:ascendency_surprisal}
+\end{equation}
+the mean Shannon surprisal of the realised edges under that null, and
+equivalently the Kullback-Leibler divergence of the edge distribution from the
+product of its marginals.
+\end{proposition}
+
+\begin{proof}
+Substituting \eqref{eq:uniform_flow} into the definition of $\mathcal{A}$, each
+non-zero term contributes
+\[
+\frac{1}{2m}\log\!\left[\frac{1/2m}{k_ik_j/(2m)^2}\right]
+\;=\; \frac{1}{2m}\log\!\left(\frac{2m}{k_ik_j}\right),
+\]
+and $2m/(k_ik_j) = 1/P^0_{ij}$.
+\end{proof}
+
+This identifies the construction rather than merely permitting it. The null
+$P^0$ is the same one against which Newman modularity is defined; the two
+quantities are different divergences from it, modularity taking the difference
+$A_{ij} - P^0_{ij}$ and ascendency the logarithm of the ratio. The transplant
+is therefore not an analogy imported from another field but a second reading of
+an object already standard in network science.
+
+\begin{corollary}[Closed form]
+\label{cor:closed_form}
+Write $\langle \log k\rangle_w = \sum_i (k_i/2m)\log k_i$ for the
+degree-weighted mean of $\log k$. Then
+\begin{equation}
+\Phi = 2\langle \log k\rangle_w,
+\qquad
+\mathcal{A} = \log(2m) - 2\langle \log k\rangle_w,
+\qquad
+\alpha = 1 - \frac{2\langle \log k\rangle_w}{\log(2m)} .
+\label{eq:closed_form}
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+Expand \eqref{eq:ascendency_surprisal}: $\sum_{ij} A_{ij}\log k_i = \sum_i k_i
+\log k_i$ and likewise for $j$, so the double sum contributes $2\sum_i k_i \log
+k_i = 4m \langle \log k\rangle_w$. Divide by $2m$ and subtract from
+$\log(2m)$; then use Lemma~\ref{lem:capacity}.
+\end{proof}
+
+\begin{corollary}[Optimal degree on regular graphs]
+\label{cor:kstar}
+For a $k$-regular graph on $n$ vertices, $\mathcal{A} = \log(n/k)$,
+$\Phi = 2\log k$ and $\alpha = \log(n/k)/\log(nk)$. The robustness function
+$R(\alpha) = -\alpha\log\alpha$ of~\cite{ulanowicz2009} is maximal at
+$\alpha = 1/e$, which holds exactly when
+\begin{equation}
+\frac{\log k^\ast}{\log n} \;=\; \frac{e-1}{e+1} \;=\; 0.4621\ldots,
+\qquad\text{that is}\qquad k^\ast = n^{(e-1)/(e+1)} .
+\label{eq:kstar}
+\end{equation}
+\end{corollary}
+
+Two features of \eqref{eq:kstar} are worth stating. The optimal degree grows
+sublinearly with the order, so the optimal density $D^\ast = n^{-2/(e+1)}$
+tends to zero: the two-sided reading prescribes increasing sparsity with size,
+which is the regime in which large empirical networks are found. And
+\eqref{eq:kstar} is a point prediction, falsifiable on any family of graphs
+with varying order, which is more than the monotone reading of
+Definition~\ref{def:fsri} can offer.
+
+\subsection{What the transplant cannot do}
+
+\begin{remark}[The order parameter is a degree-sequence statistic]
+\label{rem:degree_only}
+Equation~\eqref{eq:closed_form} depends on the graph only through $m$ and
+$\mathbf{k}$. Hence $\mathcal{A}$, $\Phi$, $\alpha$ and $R$ are invariant under
+any rewiring that preserves the degree sequence, and in particular they cannot
+distinguish a clustered graph from its configuration-model randomisation. A
+numerical check on double-edge swaps confirms this: the global clustering
+coefficient moves while $\alpha$ is unchanged to six decimal places.
+
+This bounds the reading of Remark~\ref{rem:window} more precisely than that
+remark could. The window obtained by this route is a statement about
+\emph{degree distributions} and not about wiring. It also corrects a natural
+but wrong way to describe the pairing: $\alpha$ and $\mathrm{Coex}$ are not a
+level coordinate and a shape coordinate drawn from different parts of the
+graph, since both are functionals of $\mathbf{k}$ alone, differing in
+weighting, logarithmic against quadratic, with $\mathrm{Coex}$ a pure
+dispersion that vanishes on regular graphs and $\alpha$ moving with the level
+as well. The genuine wiring content of Definition~\ref{def:fsri} is carried by
+$C$ and $M$, and no quantity in this appendix touches it. A three-way reading
+is therefore the accurate one: the degree sequence, read by $\alpha$ or by
+$\mathrm{Coex}$; the wiring at fixed degrees, read by $C$ and $M$; and the
+order.
+
+Two further scope conditions apply. The uniform flow \eqref{eq:uniform_flow} is
+a choice, and although it is the only parameter-free one available on an
+unweighted graph, the quantities above are not the ascendency of a measured
+flow network. And Ulanowicz's overhead decomposes into imports, exports,
+dissipation and redundancy on a directed flow network, of which a symmetric $A$
+retains only the last; $\Phi$ above should be read as a redundancy and not as
+the full overhead.
+\end{remark}
+
+\end{document}

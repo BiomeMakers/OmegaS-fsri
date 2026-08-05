@@ -1,0 +1,69 @@
+Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
+(CC BY-NC-ND 4.0)
+
+Copyright (c) 2026 Alberto Acedo, Biome Makers Inc.
+
+This work (paper, LaTeX source, and figures) is licensed under the Creative
+Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+It is the same license under which the companion applied paper is deposited
+at arXiv:2608.03887.
+
+You are free to:
+  Share : copy and redistribute the material in any medium or format,
+           for non-commercial purposes, with credit
+
+Under the following terms:
+  Attribution   : You must give appropriate credit, provide a link to the
+                  license, and indicate if changes were made.
+  NonCommercial : You may not use the material for commercial purposes.
+  NoDerivatives : If you remix, transform, or build upon the material, you
+                  may not distribute the modified material.
+
+Full license text: https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+---
+
+CODE LICENSE (Computational Colabs)
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+---
+
+PATENT NOTICE
+
+The Functional Symbiotic Resilience Index (FSRI, Omega) and associated
+computational methods are the subject of a pending application before the
+United States Patent and Trademark Office, Serial No. 64/121,656, filed
+electronically on 29 July 2026.
+
+The serial number is the one preliminarily assigned on filing and is subject
+to confirmation on the official filing receipt.
+
+Background rights held by Biome Makers, Inc. cover the microbiome
+network-property methods from which the index derives. They are NOT
+conveyed by any license in this repository and their use requires a
+separate agreement with Biome Makers, Inc.:
+
+  - WO 2021/119528 A1 (PCT/US2020/064668) : evaluating ecological
+    disturbance of an agricultural microbiome from network properties of
+    organism communities
+  - US 2022/0268756 A1 (Appl. No. 17/665,332) : generating and applying
+    agronomic indices from microbiome-derived parameters
+  - WO 2017/096385 A1 : microbiome-based identification, monitoring and
+    enhancement of fermentation processes and products
+
+The patents cover methods. The CC BY-NC-ND 4.0 and MIT terms above cover
+the paper and the code respectively, and neither grants a patent license.
+Commercial deployment of FSRI-based systems may require a separate patent
+license. Contact: acedo@biomemakers.com
