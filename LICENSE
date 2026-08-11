@@ -1,7 +1,7 @@
 Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
 (CC BY-NC-ND 4.0)
 
-Copyright (c) 2026 Alberto Acedo, Biome Makers Inc.
+Copyright (c) 2026 Biome Makers Inc.
 
 This work (paper, LaTeX source, and figures) is licensed under the Creative
 Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
@@ -24,19 +24,33 @@ Full license text: https://creativecommons.org/licenses/by-nc-nd/4.0/
 ---
 
 CODE LICENSE (Computational Colabs)
-MIT License
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The software in this repository (everything under colabs/ and figures/) is
+dual-licensed. You may use it under the terms of EITHER:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. GNU Affero General Public License v3.0 (AGPL-3.0)
+   -----------------------------------------------------
+   Free for research, academic and non-commercial use, and for any
+   commercial use where you are willing to comply with the AGPL-3.0
+   copyleft terms, including making the source code of any modified
+   version available to users who interact with it over a network.
+   Full text: https://www.gnu.org/licenses/agpl-3.0.en.html
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+   Evaluation exception. Running this software internally to reproduce
+   the results reported in the accompanying paper, or to evaluate the
+   index on your own data, creates no obligation under this license.
+   This applies to companies as well as to individuals. The copyleft
+   obligations begin when you distribute the software, a modified
+   version of it, or offer it as part of a service over a network.
+
+2. Commercial License
+   -------------------
+   For production or commercial use without the copyleft obligations of
+   the AGPL-3.0, for example embedding it in a closed-source product or
+   service, a separate commercial license is required.
+   Contact: acedo@biomemakers.com
+
+Choosing option 1 or option 2 is at the discretion of the user.
 
 ---
 
@@ -63,7 +77,7 @@ separate agreement with Biome Makers, Inc.:
   - WO 2017/096385 A1 : microbiome-based identification, monitoring and
     enhancement of fermentation processes and products
 
-The patents cover methods. The CC BY-NC-ND 4.0 and MIT terms above cover
-the paper and the code respectively, and neither grants a patent license.
-Commercial deployment of FSRI-based systems may require a separate patent
-license. Contact: acedo@biomemakers.com
+The patents cover methods. The CC BY-NC-ND 4.0 and AGPL-3.0 terms above
+cover the paper and the code respectively, and neither grants a patent
+license. Commercial deployment of FSRI-based systems may require a
+separate patent license. Contact: acedo@biomemakers.com
