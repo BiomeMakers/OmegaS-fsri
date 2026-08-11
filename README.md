@@ -213,7 +213,7 @@ pip install networkx numpy matplotlib scipy  # all Colabs
 ## License
 
 **Paper (LaTeX/PDF):** CC BY-NC-ND 4.0 : share and cite freely for non-commercial purposes, with attribution and without redistributing modified versions. Same license as the companion paper on arXiv.  
-**Code (Colabs):** MIT : free for any use.  
+**Code (Colabs):** AGPL-3.0 for research and non-commercial use, with internal evaluation explicitly permitted; a commercial licence is required for production use. See [`LICENSE`](LICENSE). 
 **Patent:** patent pending. Commercial use of the FSRI index in production systems may require a license. Contact: acedo@biomemakers.com
 
 ---
